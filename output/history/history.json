@@ -1,0 +1,316 @@
+[
+  {
+    "id": 1,
+    "timestamp": "2026-01-05T15:46:11.963242",
+    "date": "2026-01-05",
+    "month": "2026-01",
+    "invoice_count": 43,
+    "total_base": 16474.5,
+    "total_iva": 3459.645,
+    "total_amount": 19934.145,
+    "invoice_files": [
+      {
+        "number": "T20260001",
+        "filename": "FAC-T20260001.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260001.pdf",
+        "base": 210.0,
+        "total": 254.1
+      },
+      {
+        "number": "T20260002",
+        "filename": "FAC-T20260002.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260002.pdf",
+        "base": 484.0,
+        "total": 585.64
+      },
+      {
+        "number": "T20260003",
+        "filename": "FAC-T20260003.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260003.pdf",
+        "base": 484.0,
+        "total": 585.64
+      },
+      {
+        "number": "T20260004",
+        "filename": "FAC-T20260004.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260004.pdf",
+        "base": 484.0,
+        "total": 585.64
+      },
+      {
+        "number": "T20260005",
+        "filename": "FAC-T20260005.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260005.pdf",
+        "base": 484.0,
+        "total": 585.64
+      },
+      {
+        "number": "T20260006",
+        "filename": "FAC-T20260006.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260006.pdf",
+        "base": 484.0,
+        "total": 585.64
+      },
+      {
+        "number": "T20260007",
+        "filename": "FAC-T20260007.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260007.pdf",
+        "base": 484.0,
+        "total": 585.64
+      },
+      {
+        "number": "T20260008",
+        "filename": "FAC-T20260008.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260008.pdf",
+        "base": 484.0,
+        "total": 585.64
+      },
+      {
+        "number": "T20260009",
+        "filename": "FAC-T20260009.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260009.pdf",
+        "base": 484.0,
+        "total": 585.64
+      },
+      {
+        "number": "T20260010",
+        "filename": "FAC-T20260010.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260010.pdf",
+        "base": 484.0,
+        "total": 585.64
+      },
+      {
+        "number": "T20260011",
+        "filename": "FAC-T20260011.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260011.pdf",
+        "base": 484.0,
+        "total": 585.64
+      },
+      {
+        "number": "T20260012",
+        "filename": "FAC-T20260012.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260012.pdf",
+        "base": 271.0,
+        "total": 327.90999999999997
+      },
+      {
+        "number": "T20260013",
+        "filename": "FAC-T20260013.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260013.pdf",
+        "base": 125.0,
+        "total": 151.25
+      },
+      {
+        "number": "T20260014",
+        "filename": "FAC-T20260014.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260014.pdf",
+        "base": 467.5,
+        "total": 565.675
+      },
+      {
+        "number": "T20260015",
+        "filename": "FAC-T20260015.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260015.pdf",
+        "base": 467.5,
+        "total": 565.675
+      },
+      {
+        "number": "T20260016",
+        "filename": "FAC-T20260016.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260016.pdf",
+        "base": 467.5,
+        "total": 565.675
+      },
+      {
+        "number": "T20260017",
+        "filename": "FAC-T20260017.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260017.pdf",
+        "base": 467.5,
+        "total": 565.675
+      },
+      {
+        "number": "T20260018",
+        "filename": "FAC-T20260018.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260018.pdf",
+        "base": 467.5,
+        "total": 565.675
+      },
+      {
+        "number": "T20260019",
+        "filename": "FAC-T20260019.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260019.pdf",
+        "base": 467.5,
+        "total": 565.675
+      },
+      {
+        "number": "T20260020",
+        "filename": "FAC-T20260020.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260020.pdf",
+        "base": 467.5,
+        "total": 565.675
+      },
+      {
+        "number": "T20260021",
+        "filename": "FAC-T20260021.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260021.pdf",
+        "base": 467.5,
+        "total": 565.675
+      },
+      {
+        "number": "T20260022",
+        "filename": "FAC-T20260022.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260022.pdf",
+        "base": 467.5,
+        "total": 565.675
+      },
+      {
+        "number": "T20260023",
+        "filename": "FAC-T20260023.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260023.pdf",
+        "base": 467.5,
+        "total": 565.675
+      },
+      {
+        "number": "T20260024",
+        "filename": "FAC-T20260024.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260024.pdf",
+        "base": 467.5,
+        "total": 565.675
+      },
+      {
+        "number": "T20260025",
+        "filename": "FAC-T20260025.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260025.pdf",
+        "base": 350.0,
+        "total": 423.5
+      },
+      {
+        "number": "T20260026",
+        "filename": "FAC-T20260026.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260026.pdf",
+        "base": 350.0,
+        "total": 423.5
+      },
+      {
+        "number": "T20260027",
+        "filename": "FAC-T20260027.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260027.pdf",
+        "base": 150.0,
+        "total": 181.5
+      },
+      {
+        "number": "T20260028",
+        "filename": "FAC-T20260028.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260028.pdf",
+        "base": 432.5,
+        "total": 523.3249999999999
+      },
+      {
+        "number": "T20260029",
+        "filename": "FAC-T20260029.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260029.pdf",
+        "base": 432.5,
+        "total": 523.3249999999999
+      },
+      {
+        "number": "T20260030",
+        "filename": "FAC-T20260030.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260030.pdf",
+        "base": 316.0,
+        "total": 382.36
+      },
+      {
+        "number": "T20260031",
+        "filename": "FAC-T20260031.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260031.pdf",
+        "base": 316.0,
+        "total": 382.36
+      },
+      {
+        "number": "T20260032",
+        "filename": "FAC-T20260032.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260032.pdf",
+        "base": 112.5,
+        "total": 136.125
+      },
+      {
+        "number": "T20260033",
+        "filename": "FAC-T20260033.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260033.pdf",
+        "base": 420.0,
+        "total": 508.2
+      },
+      {
+        "number": "T20260034",
+        "filename": "FAC-T20260034.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260034.pdf",
+        "base": 412.25,
+        "total": 498.8225
+      },
+      {
+        "number": "T20260035",
+        "filename": "FAC-T20260035.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260035.pdf",
+        "base": 412.25,
+        "total": 498.8225
+      },
+      {
+        "number": "T20260036",
+        "filename": "FAC-T20260036.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260036.pdf",
+        "base": 412.25,
+        "total": 498.8225
+      },
+      {
+        "number": "T20260037",
+        "filename": "FAC-T20260037.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260037.pdf",
+        "base": 412.25,
+        "total": 498.8225
+      },
+      {
+        "number": "T20260038",
+        "filename": "FAC-T20260038.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260038.pdf",
+        "base": 315.0,
+        "total": 381.15
+      },
+      {
+        "number": "T20260039",
+        "filename": "FAC-T20260039.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260039.pdf",
+        "base": 315.0,
+        "total": 381.15
+      },
+      {
+        "number": "T20260040",
+        "filename": "FAC-T20260040.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260040.pdf",
+        "base": 37.5,
+        "total": 45.375
+      },
+      {
+        "number": "T20260041",
+        "filename": "FAC-T20260041.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260041.pdf",
+        "base": 250.0,
+        "total": 302.5
+      },
+      {
+        "number": "T20260042",
+        "filename": "FAC-T20260042.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260042.pdf",
+        "base": 400.0,
+        "total": 484.0
+      },
+      {
+        "number": "T20260043",
+        "filename": "FAC-T20260043.pdf",
+        "path": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr/FAC-T20260043.pdf",
+        "base": 40.0,
+        "total": 48.4
+      }
+    ],
+    "output_dir": "/var/folders/ln/k2gbnld168d8rsyxjz57vh580000gn/T/tmpqb0gkndr"
+  }
+]
