@@ -23,20 +23,25 @@ wheels/
 .installed.cfg
 *.egg
 
-# IDEs
+# Streamlit
+.streamlit/secrets.toml
+
+# Archivos temporales
+*.tmp
+*.log
+.DS_Store
+
+# Output (excepto estructura de carpetas)
+output/*.pdf
+output/*.zip
+output/history/*.json
+
+# Input
+input/*.xlsx
+input/*.xls
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-
-# Project specific
-input/*.xlsx
-input/*.xls
-output/*.pdf
-output/*.zip
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
