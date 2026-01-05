@@ -49,7 +49,10 @@ def add_to_history(
     total_amount: float,
     invoice_files: List[Dict],
     output_dir: str,
-    iva_rate: float = 0.21
+    iva_rate: float = 0.21,
+    excluded_transactions: List[Dict] = None,
+    split_transactions: List[Dict] = None,
+    processing_info: Dict = None
 ) -> Dict:
     """
     Añade un nuevo registro al historial
@@ -61,6 +64,9 @@ def add_to_history(
         total_amount: Total con IVA
         invoice_files: Lista de archivos de facturas generadas
         output_dir: Directorio donde se guardaron las facturas
+        excluded_transactions: Lista de transacciones excluidas (opcional)
+        split_transactions: Lista de transacciones divididas (opcional)
+        processing_info: Información del procesamiento (opcional)
         
     Returns:
         Diccionario con el registro añadido
@@ -86,7 +92,10 @@ def add_to_history(
             }
             for inv in invoice_files
         ],
-        'output_dir': output_dir
+        'output_dir': output_dir,
+        'excluded_transactions': excluded_transactions or [],
+        'split_transactions': split_transactions or [],
+        'processing_info': processing_info or {}
     }
     
     history.append(record)
@@ -138,4 +147,49 @@ def get_month_summary(records: List[Dict]) -> Dict:
         'total_amount': total_amount,
         'processing_count': len(records)
     }
+
+
+def delete_from_history(record_id: int) -> bool:
+    """
+    Elimina un registro del historial por su ID
+    
+    Args:
+        record_id: ID del registro a eliminar
+        
+    Returns:
+        True si se eliminó correctamente, False si no se encontró
+    """
+    history = load_history()
+    original_count = len(history)
+    
+    # Filtrar el registro con el ID especificado
+    history = [r for r in history if r.get('id') != record_id]
+    
+    if len(history) < original_count:
+        save_history(history)
+        return True
+    return False
+
+
+def delete_month_from_history(month: str) -> int:
+    """
+    Elimina todos los registros de un mes específico
+    
+    Args:
+        month: Mes en formato 'YYYY-MM'
+        
+    Returns:
+        Número de registros eliminados
+    """
+    history = load_history()
+    original_count = len(history)
+    
+    # Filtrar registros del mes especificado
+    history = [r for r in history if r.get('month') != month]
+    
+    deleted_count = original_count - len(history)
+    if deleted_count > 0:
+        save_history(history)
+    
+    return deleted_count
 

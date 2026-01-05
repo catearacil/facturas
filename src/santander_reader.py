@@ -273,7 +273,7 @@ def clean_amount(amount: any) -> float:
     return 0.0
 
 
-def filter_income_transactions(df: pd.DataFrame, columns: Dict[str, Optional[str]]) -> List[Dict]:
+def filter_income_transactions(df: pd.DataFrame, columns: Dict[str, Optional[str]]) -> tuple:
     """
     Filtra solo las transacciones de ingreso (valores positivos).
     
@@ -282,7 +282,8 @@ def filter_income_transactions(df: pd.DataFrame, columns: Dict[str, Optional[str
         columns: Diccionario con las columnas identificadas
         
     Returns:
-        Lista de transacciones de ingreso
+        Tupla: (transacciones_incluidas, transacciones_excluidas)
+        donde transacciones_excluidas es una lista de dicts con 'fecha', 'concepto', 'importe', 'razon'
     """
     if not all(columns.values()):
         missing = [k for k, v in columns.items() if v is None]
@@ -302,50 +303,81 @@ def filter_income_transactions(df: pd.DataFrame, columns: Dict[str, Optional[str
         raise ValueError(error_msg)
     
     transactions = []
+    excluded = []
     
     for idx, row in df.iterrows():
         try:
             # Obtener importe
             importe = clean_amount(row[columns['importe']])
             
+            # Obtener fecha
+            fecha = row[columns['fecha_operacion']]
+            if pd.isna(fecha):
+                fecha = None
+            else:
+                # Convertir a string si es fecha
+                if hasattr(fecha, 'strftime'):
+                    fecha = fecha.strftime('%d/%m/%Y')
+                else:
+                    fecha = str(fecha)
+            
+            # Obtener concepto
+            concepto = str(row[columns['concepto']]) if not pd.isna(row[columns['concepto']]) else "Sin concepto"
+            
             # Solo procesar ingresos (valores positivos)
             if importe > 0:
-                # Obtener fecha
-                fecha = row[columns['fecha_operacion']]
-                if pd.isna(fecha):
-                    fecha = None
-                else:
-                    # Convertir a string si es fecha
-                    if hasattr(fecha, 'strftime'):
-                        fecha = fecha.strftime('%d/%m/%Y')
-                    else:
-                        fecha = str(fecha)
-                
-                # Obtener concepto
-                concepto = str(row[columns['concepto']]) if not pd.isna(row[columns['concepto']]) else "Sin concepto"
-                
                 transactions.append({
                     'fecha': fecha,
                     'concepto': concepto,
                     'importe': importe  # Este es la base imponible (sin IVA)
                 })
+            else:
+                # Registrar transacción excluida
+                razon = "Gasto o importe cero" if importe < 0 else "Importe cero"
+                excluded.append({
+                    'fecha': fecha,
+                    'concepto': concepto,
+                    'importe': importe,
+                    'razon': razon
+                })
         except Exception as e:
-            # Continuar con la siguiente fila si hay error
-            continue
+            # Registrar transacción con error
+            try:
+                concepto = str(row[columns['concepto']]) if columns['concepto'] and not pd.isna(row[columns['concepto']]) else "Sin concepto"
+                fecha = None
+                try:
+                    fecha_val = row[columns['fecha_operacion']]
+                    if not pd.isna(fecha_val):
+                        if hasattr(fecha_val, 'strftime'):
+                            fecha = fecha_val.strftime('%d/%m/%Y')
+                        else:
+                            fecha = str(fecha_val)
+                except:
+                    pass
+            except:
+                concepto = "Error al leer concepto"
+                fecha = None
+            
+            excluded.append({
+                'fecha': fecha,
+                'concepto': concepto,
+                'importe': 0.0,
+                'razon': f"Error al procesar: {str(e)}"
+            })
     
-    return transactions
+    return transactions, excluded
 
 
-def process_santander_file(file_path: str) -> List[Dict]:
+def process_santander_file(file_path: str) -> tuple:
     """
-    Procesa un archivo Excel de Santander y retorna las transacciones de ingreso.
+    Procesa un archivo Excel de Santander y retorna las transacciones de ingreso y excluidas.
     
     Args:
         file_path: Ruta al archivo Excel
         
     Returns:
-        Lista de transacciones de ingreso con estructura:
-        [{'fecha': str, 'concepto': str, 'importe': float}, ...]
+        Tupla: (transacciones_incluidas, transacciones_excluidas, info_procesamiento)
+        donde info_procesamiento es un dict con información del procesamiento
     """
     # Leer el Excel
     df = read_santander_excel(file_path)
@@ -354,7 +386,14 @@ def process_santander_file(file_path: str) -> List[Dict]:
     columns = identify_columns(df)
     
     # Filtrar transacciones de ingreso
-    transactions = filter_income_transactions(df, columns)
+    transactions, excluded = filter_income_transactions(df, columns)
     
-    return transactions
+    info = {
+        'total_filas': len(df),
+        'transacciones_incluidas': len(transactions),
+        'transacciones_excluidas': len(excluded),
+        'columnas_identificadas': columns
+    }
+    
+    return transactions, excluded, info
 

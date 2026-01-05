@@ -69,7 +69,7 @@ def split_transaction(transaction: Dict, max_base: float = None) -> List[Dict]:
     return invoices
 
 
-def process_transactions(transactions: List[Dict], max_base: float = None) -> List[Dict]:
+def process_transactions(transactions: List[Dict], max_base: float = None) -> tuple:
     """
     Procesa una lista de transacciones y las divide en facturas según el límite.
     
@@ -78,16 +78,29 @@ def process_transactions(transactions: List[Dict], max_base: float = None) -> Li
         max_base: Límite máximo de base imponible por factura (default desde config)
         
     Returns:
-        Lista de todas las facturas a generar
+        Tupla: (lista_de_facturas, transacciones_divididas)
+        donde transacciones_divididas es una lista de dicts con información sobre divisiones
     """
     if max_base is None:
         max_base = config.MAX_INVOICE_BASE
     
     all_invoices = []
+    split_transactions = []  # Rastrear transacciones que se dividieron
     
     for transaction in transactions:
         invoices = split_transaction(transaction, max_base)
+        
+        # Si se dividió en más de una factura, registrar la información
+        if len(invoices) > 1:
+            split_transactions.append({
+                'fecha': transaction['fecha'],
+                'concepto': transaction['concepto'],
+                'importe_original': transaction['importe'],
+                'num_facturas': len(invoices),
+                'limite_aplicado': max_base
+            })
+        
         all_invoices.extend(invoices)
     
-    return all_invoices
+    return all_invoices, split_transactions
 

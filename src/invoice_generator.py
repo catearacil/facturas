@@ -6,7 +6,9 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image, KeepTogether
+from reportlab.platypus.frames import Frame
+from reportlab.lib.units import cm
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -46,6 +48,41 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
         invoice_number: Número de factura (ej: T260001)
         output_path: Ruta donde guardar el PDF
     """
+    # Calcular valores para el footer
+    base_imponible = invoice_data['base_imponible']
+    iva_amount = base_imponible * config.IVA_RATE
+    total = base_imponible + iva_amount
+    
+    # Función para dibujar el footer en cada página (al final de la página)
+    def on_first_page(canvas, doc):
+        # Obtener dimensiones de la página
+        page_width, page_height = A4
+        
+        # Posición Y del footer (al final de la página, respetando bottomMargin)
+        footer_y = 20*mm  # bottomMargin
+        
+        # Dibujar línea horizontal
+        canvas.setStrokeColor(COLOR_BLACK)
+        canvas.setLineWidth(0.5)
+        canvas.line(20*mm, footer_y, page_width - 20*mm, footer_y)  # De izquierda a derecha menos márgenes
+        
+        # Texto del footer
+        canvas.setFont('Helvetica', 7)
+        canvas.setFillColor(COLOR_BLACK)
+        
+        # Texto izquierdo (número de factura y registro)
+        footer_left = f"{invoice_number} - {format_currency(total)}€\n{config.COMPANY_DATA['registry']}"
+        textobject = canvas.beginText(20*mm, footer_y - 12*mm)  # Más espacio arriba para el texto
+        textobject.setFont('Helvetica', 7)
+        textobject.setLeading(9)
+        for line in footer_left.split('\n'):
+            textobject.textLine(line)
+        canvas.drawText(textobject)
+        
+        # Texto derecho (Pág. 1 de 1) - alineado con la primera línea del texto izquierdo
+        canvas.setFont('Helvetica', 7)
+        canvas.drawRightString(page_width - 20*mm, footer_y - 4*mm, 'Pág. 1 de 1')
+    
     # Crear el documento
     doc = SimpleDocTemplate(
         output_path,
@@ -53,7 +90,7 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
         rightMargin=20*mm,
         leftMargin=20*mm,
         topMargin=20*mm,
-        bottomMargin=20*mm
+        bottomMargin=35*mm  # Más espacio abajo para el footer
     )
     
     # Contenedor para los elementos
@@ -70,7 +107,10 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
         textColor=COLOR_BLACK,
         fontName='Helvetica-Bold',
         leading=26,
-        spaceAfter=0  # Sin espacio después, se controla con Spacer
+        spaceAfter=0,  # Sin espacio después, se controla con Spacer
+        spaceBefore=0,  # Sin espacio antes
+        leftIndent=0,  # Sin indentación - alineado con márgenes del documento
+        rightIndent=0  # Sin indentación
     )
     
     # Estilo para número y fecha
@@ -91,7 +131,9 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
         textColor=COLOR_BLACK,
         fontName='Helvetica',
         leading=11,
-        spaceAfter=4
+        spaceAfter=4,
+        leftIndent=0,  # Sin indentación para alineación consistente
+        rightIndent=0
     )
     
     # Estilo para tagline
@@ -136,19 +178,22 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
         except Exception as e:
             logo_image = None
     
-    # Crear tabla para header: título a la izquierda, logo a la derecha
+    # HEADER: Título y logo en la misma línea, bien alineados
+    # Ancho disponible: 210mm - 40mm márgenes = 170mm (igual que el resto)
     header_data = [[
         Paragraph('Factura Simplificada', title_style),
         logo_image if logo_image else Paragraph('', info_style)
     ]]
-    header_table = Table(header_data, colWidths=[140*mm, 55*mm])
+    header_table = Table(header_data, colWidths=[125*mm, 45*mm])  # Total 170mm
     header_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('VALIGN', (0, 0), (0, 0), 'TOP'),  # Título alineado arriba
+        ('VALIGN', (1, 0), (1, 0), 'TOP'),  # Logo alineado arriba (mismo nivel que título)
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),  # Título a la izquierda
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),  # Logo a la derecha
+        ('TOPPADDING', (0, 0), (-1, -1), 0),  # Sin padding - igual que el resto
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2*mm),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),  # Sin padding - igual que el resto
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),  # Sin padding - igual que el resto
     ]))
     story.append(header_table)
     
@@ -174,7 +219,7 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
     
     concepto = invoice_data.get('concepto', 'Sin concepto')
     
-    # Headers de la tabla
+    # Headers de la tabla - según la imagen: CONCEPTO izquierda, resto centrados
     table_data = [
         ['CONCEPTO', 'PRECIO', 'UNIDADES', 'SUBTOTAL', 'IVA', 'TOTAL']
     ]
@@ -190,40 +235,96 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
         alignment=TA_LEFT
     ))
     
+    # Crear Paragraphs para valores numéricos con alineación correcta
+    precio_para = Paragraph(format_currency(base_imponible) + '€', ParagraphStyle(
+        'PrecioStyle',
+        parent=styles['Normal'],
+        fontSize=8,
+        textColor=COLOR_BLACK,
+        fontName='Helvetica',
+        leading=10,
+        alignment=TA_RIGHT
+    ))
+    
+    unidades_para = Paragraph('1', ParagraphStyle(
+        'UnidadesStyle',
+        parent=styles['Normal'],
+        fontSize=8,
+        textColor=COLOR_BLACK,
+        fontName='Helvetica',
+        leading=10,
+        alignment=TA_CENTER
+    ))
+    
+    subtotal_para = Paragraph(format_currency(base_imponible) + '€', ParagraphStyle(
+        'SubtotalStyle',
+        parent=styles['Normal'],
+        fontSize=8,
+        textColor=COLOR_BLACK,
+        fontName='Helvetica',
+        leading=10,
+        alignment=TA_RIGHT
+    ))
+    
+    iva_para = Paragraph('21%', ParagraphStyle(
+        'IvaStyle',
+        parent=styles['Normal'],
+        fontSize=8,
+        textColor=COLOR_BLACK,
+        fontName='Helvetica',
+        leading=10,
+        alignment=TA_CENTER
+    ))
+    
+    total_para = Paragraph(format_currency(total) + '€', ParagraphStyle(
+        'TotalStyle',
+        parent=styles['Normal'],
+        fontSize=8,
+        textColor=COLOR_BLACK,
+        fontName='Helvetica',
+        leading=10,
+        alignment=TA_RIGHT
+    ))
+    
     table_data.append([
         concepto_para,
-        '',  # PRECIO vacío (no se usa en este formato)
-        '1',
-        format_currency(base_imponible) + '€',
-        '21%',
-        format_currency(total) + '€'
+        precio_para,  # PRECIO con valor
+        unidades_para,  # UNIDADES centrado
+        subtotal_para,  # SUBTOTAL derecha
+        iva_para,  # IVA centrado
+        total_para  # TOTAL derecha
     ])
     
     # Crear tabla con anchos ajustados
     # Ancho disponible: A4 (210mm) - márgenes (40mm) = 170mm
-    # Distribución: CONCEPTO (más ancho), PRECIO (vacío), UNIDADES, SUBTOTAL, IVA, TOTAL
-    concept_table = Table(table_data, colWidths=[80*mm, 12*mm, 18*mm, 20*mm, 15*mm, 20*mm])
+    # Distribución: CONCEPTO (más ancho), PRECIO, UNIDADES, SUBTOTAL, IVA, TOTAL
+    concept_table = Table(table_data, colWidths=[75*mm, 18*mm, 18*mm, 20*mm, 15*mm, 20*mm])
     concept_table.setStyle(TableStyle([
-        # Headers - todos alineados a la izquierda como en la imagen
+        # Headers - CONCEPTO izquierda, resto centrados (como en la imagen)
         ('BACKGROUND', (0, 0), (-1, 0), colors.white),
         ('TEXTCOLOR', (0, 0), (-1, 0), COLOR_BLACK),
-        ('ALIGN', (0, 0), (-1, 0), 'LEFT'),  # Headers a la izquierda
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),  # CONCEPTO a la izquierda
+        ('ALIGN', (1, 0), (-1, 0), 'CENTER'),  # Resto de headers centrados
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 8),  # Tamaño más pequeño
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
         ('TOPPADDING', (0, 0), (-1, 0), 8),
         # Línea separadora debajo de headers
         ('LINEBELOW', (0, 0), (-1, 0), 1, COLOR_BLACK),
-        # Datos
-        ('FONTNAME', (1, 1), (5, 1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, 1), 8),  # Mismo tamaño para todos
+        # Datos - alineación específica según la imagen
+        ('FONTNAME', (0, 1), (-1, 1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, 1), 8),
         ('BOTTOMPADDING', (0, 1), (-1, 1), 8),
         ('TOPPADDING', (0, 1), (-1, 1), 8),
-        # Alineación: concepto a la izquierda, números a la derecha
-        ('ALIGN', (0, 1), (0, 1), 'LEFT'),
-        ('ALIGN', (1, 1), (5, 1), 'RIGHT'),
+        # Alineación de datos: CONCEPTO izquierda, PRECIO derecha, UNIDADES centrado, SUBTOTAL derecha, IVA centrado, TOTAL derecha
+        ('ALIGN', (0, 1), (0, 1), 'LEFT'),  # CONCEPTO izquierda
+        ('ALIGN', (1, 1), (1, 1), 'RIGHT'),  # PRECIO derecha
+        ('ALIGN', (2, 1), (2, 1), 'CENTER'),  # UNIDADES centrado
+        ('ALIGN', (3, 1), (3, 1), 'RIGHT'),  # SUBTOTAL derecha
+        ('ALIGN', (4, 1), (4, 1), 'CENTER'),  # IVA centrado
+        ('ALIGN', (5, 1), (5, 1), 'RIGHT'),  # TOTAL derecha
         ('VALIGN', (0, 1), (0, 1), 'TOP'),
-        # Padding horizontal igual a cero (los márgenes del documento ya proporcionan el espacio)
+        # Padding horizontal - cero para alineación perfecta con el resto
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
         ('RIGHTPADDING', (0, 0), (-1, -1), 0),
     ]))
@@ -258,62 +359,42 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
     ]))
     
     # Alinear tabla a la derecha usando contenedor
-    summary_container = Table([[summary_table]], colWidths=[195*mm])
+    # Ancho disponible: 210mm - 40mm márgenes = 170mm
+    summary_container = Table([[summary_table]], colWidths=[170*mm])
     summary_container.setStyle(TableStyle([
         ('ALIGN', (0, 0), (0, 0), 'RIGHT'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
     ]))
     story.append(Spacer(1, 10*mm))
     story.append(summary_container)
     
-    # Espacio flexible para empujar el footer al final
-    story.append(Spacer(1, 1))
+    # TÉRMINOS Y CONDICIONES (después del resumen, más arriba para evitar segunda página)
+    story.append(Spacer(1, 8*mm))
     
-    # FOOTER
-    # Línea horizontal
-    footer_line = Table([['']], colWidths=[195*mm])
-    footer_line.setStyle(TableStyle([
-        ('LINEBELOW', (0, 0), (0, 0), 0.5, COLOR_BLACK),
-    ]))
-    story.append(footer_line)
-    story.append(Spacer(1, 4*mm))
-    
-    # Referencia y registro
-    footer_text = f"""
-    {invoice_number} - {format_currency(total)}€<br/>
-    {config.COMPANY_DATA['registry']}
+    terms_text = """
+    <b>Términos y condiciones</b><br/><br/>
+    MALLORCAMP SPORT, S.L. es el responsable del tratamiento de los datos personales facilitados bajo su consentimiento y le informa que estos datos serán tratados de conformidad con lo dispuesto en el Reglamento (UE) 2016/679 de 27 de abril de 2016 (GDPR), con la finalidad de mantener una relación comercial, y conservados mientras exista un interés mutuo para mantener la finalidad del tratamiento, cuando ya no sea necesario para tal fin, se eliminarán con la seguridad adecuada, tomando las medidas encaminadas a asegurar la seudonimización de los datos o la destrucción total de los mismos. Los datos no se comunicarán a terceros, salvo por motivos legales. Asimismo, se informa que los derechos de acceso, rectificación, portabilidad y oposición a su tratamiento pueden ejercitarse dirigiéndose a MALLORCAMP SPORT, S.L. en Carrer Hostalets, 19 Portals Nous Calvià- Islas Baleares 07181. Correo electrónico: info@mallorcamp.com y la denuncia en www.agpd.es
     """
     
-    footer_table_data = [
-        [
-            Paragraph(footer_text, ParagraphStyle(
-                'FooterStyle',
-                parent=styles['Normal'],
-                fontSize=7,
-                textColor=COLOR_BLACK,
-                fontName='Helvetica',
-                leading=9
-            )),
-            Paragraph('Pág. 1 de 1', ParagraphStyle(
-                'PageStyle',
-                parent=styles['Normal'],
-                fontSize=7,
-                textColor=COLOR_BLACK,
-                fontName='Helvetica',
-                leading=9,
-                alignment=TA_RIGHT
-            ))
-        ]
-    ]
+    terms_style = ParagraphStyle(
+        'TermsStyle',
+        parent=styles['Normal'],
+        fontSize=7,  # Tamaño legible pero discreto
+        textColor=COLOR_BLACK,
+        fontName='Helvetica',
+        leading=9,  # Espaciado entre líneas
+        alignment=TA_LEFT,
+        spaceAfter=0,
+        leftIndent=0,  # Sin indentación - alineado con el resto (márgenes del documento)
+        rightIndent=0,  # Sin indentación - alineado con el resto (márgenes del documento)
+        firstLineIndent=0  # Sin sangría en primera línea
+    )
     
-    footer_table = Table(footer_table_data, colWidths=[150*mm, 45*mm])
-    footer_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-    ]))
-    story.append(footer_table)
+    story.append(Paragraph(terms_text, terms_style))
     
-    # Construir el PDF
-    doc.build(story)
+    # Construir el PDF con el footer dibujado en on_first_page (al final de la página)
+    doc.build(story, onFirstPage=on_first_page, onLaterPages=on_first_page)
 
 
 def generate_invoices(invoices: list, output_dir: str, start_number: int = 1) -> list:

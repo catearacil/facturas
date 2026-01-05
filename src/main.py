@@ -65,16 +65,30 @@ def main():
     
     try:
         print(f"📖 Leyendo extracto: {args.input_file}")
-        transactions = process_santander_file(args.input_file)
+        transactions, excluded, info = process_santander_file(args.input_file)
         
         if not transactions:
             print("⚠️  No se encontraron transacciones de ingreso en el extracto.")
+            if excluded:
+                print(f"\n📋 Se encontraron {len(excluded)} transacciones excluidas:")
+                for trans in excluded[:5]:  # Mostrar primeras 5
+                    print(f"  - {trans.get('concepto', 'Sin concepto')}: {trans.get('razon', 'Sin razón')}")
+                if len(excluded) > 5:
+                    print(f"  ... y {len(excluded) - 5} más")
             sys.exit(0)
         
         print(f"✅ Se encontraron {len(transactions)} transacciones de ingreso")
+        if excluded:
+            print(f"⚠️  Se excluyeron {len(excluded)} transacciones (gastos o errores)")
         
         print(f"🔄 Procesando transacciones (IVA: {args.iva}%, Límite: {args.max_base}€)...")
-        invoices = process_transactions(transactions, args.max_base)
+        invoices, split_transactions = process_transactions(transactions, args.max_base)
+        
+        if split_transactions:
+            print(f"\n✂️  Se dividieron {len(split_transactions)} transacciones grandes:")
+            for trans in split_transactions:
+                print(f"  - {trans.get('concepto', 'Sin concepto')[:50]}: "
+                      f"{trans.get('importe_original', 0):,.2f} € → {trans.get('num_facturas', 0)} facturas")
         
         print(f"📄 Generando {len(invoices)} facturas...")
         

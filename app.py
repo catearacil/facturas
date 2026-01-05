@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.santander_reader import process_santander_file
 from src.invoice_splitter import process_transactions
 from src.invoice_generator import generate_invoices
-from src.history_manager import add_to_history, get_history_by_month, get_month_summary
+from src.history_manager import add_to_history, get_history_by_month, get_month_summary, delete_from_history, delete_month_from_history
 import config
 
 
@@ -116,8 +116,8 @@ with tab1:
                             tmp_file.write(uploaded_file.getvalue())
                             tmp_path = tmp_file.name
                         
-                        # Procesar extracto
-                        transactions = process_santander_file(tmp_path)
+                        # Procesar extracto - ahora devuelve tupla (transactions, excluded, info)
+                        transactions, excluded_transactions, processing_info = process_santander_file(tmp_path)
                         
                         if not transactions:
                             st.warning("⚠️ No se encontraron transacciones de ingreso en el extracto.")
@@ -129,7 +129,7 @@ with tab1:
                             config.MAX_INVOICE_BASE = max_base
                             
                             # Dividir transacciones en facturas
-                            invoices = process_transactions(transactions, max_base)
+                            invoices, split_transactions = process_transactions(transactions, max_base)
                             
                             # Crear directorio de salida temporal
                             output_dir = tempfile.mkdtemp()
@@ -148,6 +148,9 @@ with tab1:
                             
                             # Guardar en sesión
                             st.session_state.invoices_generated = generated
+                            st.session_state.excluded_transactions = excluded_transactions
+                            st.session_state.split_transactions = split_transactions
+                            st.session_state.processing_info = processing_info
                             st.session_state.summary_data = {
                                 'total_transactions': len(transactions),
                                 'total_invoices': len(invoices),
@@ -165,7 +168,10 @@ with tab1:
                                 total_amount=total_amount,
                                 invoice_files=generated,
                                 output_dir=output_dir,
-                                iva_rate=iva_rate / 100
+                                iva_rate=iva_rate / 100,
+                                excluded_transactions=excluded_transactions,
+                                split_transactions=split_transactions,
+                                processing_info=processing_info
                             )
                             
                             # Limpiar archivo temporal
@@ -299,6 +305,132 @@ with tab1:
             if len(st.session_state.invoices_generated) > 10:
                 st.info(f"Mostrando las primeras 10 facturas. El ZIP contiene todas las {len(st.session_state.invoices_generated)} facturas.")
 
+        # Mostrar transacciones excluidas si existen
+        if st.session_state.invoices_generated and 'excluded_transactions' in st.session_state:
+            excluded = st.session_state.excluded_transactions
+            info = st.session_state.get('processing_info', {})
+            
+            if excluded:
+                st.markdown("---")
+                st.subheader("📋 Transacciones Excluidas")
+                
+                # Resumen
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Total Excluidas", len(excluded))
+                with col2:
+                    total_excluido = sum(t.get('importe', 0) for t in excluded)
+                    st.metric("Importe Total Excluido", f"{abs(total_excluido):,.2f} €")
+                
+                # Agrupar por razón
+                razones = {}
+                for trans in excluded:
+                    razon = trans.get('razon', 'Sin razón especificada')
+                    if razon not in razones:
+                        razones[razon] = []
+                    razones[razon].append(trans)
+                
+                # Mostrar por categorías
+                for razon, trans_list in razones.items():
+                    with st.expander(f"❌ {razon} ({len(trans_list)} transacciones)", expanded=False):
+                        # Crear DataFrame para mostrar
+                        df_excluded = pd.DataFrame(trans_list)
+                        # Reordenar columnas si existe 'razon'
+                        if 'razon' in df_excluded.columns:
+                            # Mostrar sin la columna razon en la tabla (ya está en el título)
+                            df_display = df_excluded[['fecha', 'concepto', 'importe']].copy()
+                        else:
+                            df_display = df_excluded.copy()
+                        
+                        st.dataframe(df_display, use_container_width=True, hide_index=True)
+                        
+                        # Botón para descargar CSV de esta categoría
+                        csv = df_excluded.to_csv(index=False, encoding='utf-8-sig')
+                        st.download_button(
+                            label=f"📥 Descargar {razon} (CSV)",
+                            data=csv,
+                            file_name=f"transacciones_excluidas_{razon.replace(' ', '_').replace('/', '_')}.csv",
+                            mime="text/csv",
+                            key=f"download_excluded_{hash(razon)}"
+                        )
+                
+                # Botón para descargar todas las excluidas
+                df_all_excluded = pd.DataFrame(excluded)
+                csv_all = df_all_excluded.to_csv(index=False, encoding='utf-8-sig')
+                st.download_button(
+                    label="📥 Descargar Todas las Transacciones Excluidas (CSV)",
+                    data=csv_all,
+                    file_name=f"todas_transacciones_excluidas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="download_all_excluded"
+                )
+                
+                # Información adicional
+                st.info(f"""
+                **ℹ️ Información del procesamiento:**
+                - Total de filas en el archivo: {info.get('total_filas', 'N/A')}
+                - Transacciones incluidas: {info.get('transacciones_incluidas', 0)}
+                - Transacciones excluidas: {info.get('transacciones_excluidas', 0)}
+                """)
+        
+        # Mostrar transacciones divididas si existen
+        if st.session_state.invoices_generated and 'split_transactions' in st.session_state:
+            split_trans = st.session_state.split_transactions
+            
+            if split_trans:
+                st.markdown("---")
+                st.subheader("✂️ Transacciones Divididas en Múltiples Facturas")
+                
+                # Resumen
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Transacciones Divididas", len(split_trans))
+                with col2:
+                    total_original = sum(t.get('importe_original', 0) for t in split_trans)
+                    st.metric("Importe Total Original", f"{total_original:,.2f} €")
+                with col3:
+                    total_facturas = sum(t.get('num_facturas', 0) for t in split_trans)
+                    st.metric("Total Facturas Generadas", total_facturas)
+                
+                # Crear DataFrame para mostrar
+                df_split = pd.DataFrame(split_trans)
+                # Formatear importe para mostrar
+                df_split['importe_original'] = df_split['importe_original'].apply(lambda x: f"{x:,.2f} €")
+                df_split['limite_aplicado'] = df_split['limite_aplicado'].apply(lambda x: f"{x:,.2f} €")
+                
+                # Renombrar columnas para mejor visualización
+                df_split_display = df_split.rename(columns={
+                    'fecha': 'Fecha',
+                    'concepto': 'Concepto',
+                    'importe_original': 'Importe Original',
+                    'num_facturas': 'Nº Facturas',
+                    'limite_aplicado': 'Límite Aplicado'
+                })
+                
+                # Mostrar tabla
+                st.dataframe(df_split_display[['Fecha', 'Concepto', 'Importe Original', 'Nº Facturas', 'Límite Aplicado']], 
+                           use_container_width=True, hide_index=True)
+                
+                # Botón para descargar CSV
+                # Restaurar valores numéricos para el CSV
+                df_split_csv = pd.DataFrame(split_trans)
+                csv_split = df_split_csv.to_csv(index=False, encoding='utf-8-sig')
+                st.download_button(
+                    label="📥 Descargar Transacciones Divididas (CSV)",
+                    data=csv_split,
+                    file_name=f"transacciones_divididas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="download_split_transactions"
+                )
+                
+                st.info(f"""
+                **💡 Nota:** Estas transacciones fueron divididas porque su importe superó el límite máximo 
+                de {max_base:,.2f} € por factura. Cada transacción se dividió en múltiples facturas 
+                para cumplir con este límite.
+                """)
+
         # Footer
         st.markdown("---")
         st.markdown(
@@ -357,18 +489,30 @@ with tab2:
                 month_name = month
             
             with st.expander(f"📅 {month_name} ({len(records)} procesamiento{'s' if len(records) > 1 else ''})", expanded=True):
-                # Resumen del mes
-                summary = get_month_summary(records)
+                # Botón para eliminar todo el mes
+                col_header1, col_header2 = st.columns([4, 1])
+                with col_header1:
+                    # Resumen del mes
+                    summary = get_month_summary(records)
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Total Facturas", summary['total_invoices'])
+                    with col2:
+                        st.metric("Base Imponible", f"{summary['total_base']:,.2f} €")
+                    with col3:
+                        st.metric("IVA", f"{summary['total_iva']:,.2f} €")
+                    with col4:
+                        st.metric("Total", f"{summary['total_amount']:,.2f} €")
                 
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Total Facturas", summary['total_invoices'])
-                with col2:
-                    st.metric("Base Imponible", f"{summary['total_base']:,.2f} €")
-                with col3:
-                    st.metric("IVA", f"{summary['total_iva']:,.2f} €")
-                with col4:
-                    st.metric("Total", f"{summary['total_amount']:,.2f} €")
+                with col_header2:
+                    if st.button("🗑️ Eliminar Mes", key=f"delete_month_{month}", use_container_width=True, type="secondary"):
+                        deleted = delete_month_from_history(month)
+                        if deleted > 0:
+                            st.success(f"✅ Se eliminaron {deleted} registro(s) del mes {month_name}")
+                            st.rerun()
+                        else:
+                            st.error("❌ No se pudo eliminar el mes")
                 
                 st.markdown("---")
                 
@@ -381,7 +525,17 @@ with tab2:
                     except:
                         date_formatted = record['date']
                     
-                    st.markdown(f"**📄 Procesamiento del {date_formatted}**")
+                    # Header del procesamiento con botón de eliminar
+                    col_proc1, col_proc2 = st.columns([4, 1])
+                    with col_proc1:
+                        st.markdown(f"**📄 Procesamiento del {date_formatted}**")
+                    with col_proc2:
+                        if st.button("🗑️ Eliminar", key=f"delete_{record['id']}", use_container_width=True, type="secondary"):
+                            if delete_from_history(record['id']):
+                                st.success(f"✅ Procesamiento del {date_formatted} eliminado")
+                                st.rerun()
+                            else:
+                                st.error("❌ No se pudo eliminar el procesamiento")
                     
                     # Mostrar información en columnas
                     col1, col2, col3, col4 = st.columns(4)
@@ -428,6 +582,86 @@ with tab2:
                                             )
                                     else:
                                         st.warning(f"⚠️ {inv_file['number']}")
+                    
+                    # Mostrar transacciones excluidas si existen
+                    excluded = record.get('excluded_transactions', [])
+                    if excluded:
+                        st.markdown("---")
+                        with st.expander(f"📋 Transacciones Excluidas ({len(excluded)} transacciones)", expanded=False):
+                            # Resumen
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.metric("Total Excluidas", len(excluded))
+                            with col2:
+                                total_excluido = sum(t.get('importe', 0) for t in excluded)
+                                st.metric("Importe Total Excluido", f"{abs(total_excluido):,.2f} €")
+                            
+                            # Agrupar por razón
+                            razones = {}
+                            for trans in excluded:
+                                razon = trans.get('razon', 'Sin razón especificada')
+                                if razon not in razones:
+                                    razones[razon] = []
+                                razones[razon].append(trans)
+                            
+                            # Mostrar por categorías
+                            for razon, trans_list in razones.items():
+                                with st.expander(f"❌ {razon} ({len(trans_list)} transacciones)", expanded=False):
+                                    df_excluded = pd.DataFrame(trans_list)
+                                    if 'razon' in df_excluded.columns:
+                                        df_display = df_excluded[['fecha', 'concepto', 'importe']].copy()
+                                    else:
+                                        df_display = df_excluded.copy()
+                                    st.dataframe(df_display, use_container_width=True, hide_index=True)
+                            
+                            # Información del procesamiento
+                            info = record.get('processing_info', {})
+                            if info:
+                                st.info(f"""
+                                **ℹ️ Información del procesamiento:**
+                                - Total de filas en el archivo: {info.get('total_filas', 'N/A')}
+                                - Transacciones incluidas: {info.get('transacciones_incluidas', 0)}
+                                - Transacciones excluidas: {info.get('transacciones_excluidas', 0)}
+                                """)
+                    
+                    # Mostrar transacciones divididas si existen
+                    split_trans = record.get('split_transactions', [])
+                    if split_trans:
+                        st.markdown("---")
+                        with st.expander(f"✂️ Transacciones Divididas ({len(split_trans)} transacciones)", expanded=False):
+                            # Resumen
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("Transacciones Divididas", len(split_trans))
+                            with col2:
+                                total_original = sum(t.get('importe_original', 0) for t in split_trans)
+                                st.metric("Importe Total Original", f"{total_original:,.2f} €")
+                            with col3:
+                                total_facturas = sum(t.get('num_facturas', 0) for t in split_trans)
+                                st.metric("Total Facturas Generadas", total_facturas)
+                            
+                            # Crear DataFrame para mostrar
+                            df_split = pd.DataFrame(split_trans)
+                            # Formatear importe para mostrar
+                            df_split['importe_original'] = df_split['importe_original'].apply(lambda x: f"{x:,.2f} €")
+                            df_split['limite_aplicado'] = df_split['limite_aplicado'].apply(lambda x: f"{x:,.2f} €")
+                            
+                            # Renombrar columnas
+                            df_split_display = df_split.rename(columns={
+                                'fecha': 'Fecha',
+                                'concepto': 'Concepto',
+                                'importe_original': 'Importe Original',
+                                'num_facturas': 'Nº Facturas',
+                                'limite_aplicado': 'Límite Aplicado'
+                            })
+                            
+                            st.dataframe(df_split_display[['Fecha', 'Concepto', 'Importe Original', 'Nº Facturas', 'Límite Aplicado']], 
+                                       use_container_width=True, hide_index=True)
+                            
+                            st.info(f"""
+                            **💡 Nota:** Estas transacciones fueron divididas porque su importe superó el límite máximo 
+                            por factura. Cada transacción se dividió en múltiples facturas para cumplir con este límite.
+                            """)
                     
                     if idx < len(records) - 1:
                         st.markdown("---")
