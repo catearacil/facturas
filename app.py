@@ -8,6 +8,7 @@ import zipfile
 import os
 import tempfile
 import base64
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -20,6 +21,31 @@ from src.invoice_splitter import process_transactions
 from src.invoice_generator import generate_invoices
 from src.history_manager import add_to_history, get_history_by_month, get_month_summary, delete_from_history, delete_month_from_history
 import config
+
+
+# Función para cargar configuración del usuario
+def load_user_config():
+    """Carga la configuración del usuario desde un archivo JSON"""
+    config_path = os.path.join(os.path.dirname(__file__), 'output', 'user_config.json')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+
+# Función para guardar configuración del usuario
+def save_user_config(config_dict):
+    """Guarda la configuración del usuario en un archivo JSON"""
+    config_path = os.path.join(os.path.dirname(__file__), 'output', 'user_config.json')
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    try:
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config_dict, f, indent=2)
+    except Exception as e:
+        st.warning(f"No se pudo guardar la configuración: {e}")
 
 
 # Configuración de la página
@@ -40,38 +66,50 @@ tab1, tab2 = st.tabs(["🔄 Generar Facturas", "📊 Historial"])
 with st.sidebar:
     st.header("⚙️ Configuración")
     
-    # Inicializar valores en session_state si no existen
-    if 'iva_rate' not in st.session_state:
-        st.session_state.iva_rate = config.IVA_RATE * 100
-    if 'max_base' not in st.session_state:
-        st.session_state.max_base = config.MAX_INVOICE_BASE
+    # Cargar configuración guardada del usuario
+    user_config = load_user_config()
     
-    # IVA
+    # Inicializar valores: primero desde archivo guardado, luego session_state, luego default
+    default_iva = user_config.get('iva_rate', config.IVA_RATE * 100)
+    default_max_base = user_config.get('max_base', config.MAX_INVOICE_BASE)
+    
+    # Inicializar session_state SIEMPRE desde el archivo guardado (para que persista entre recargas)
+    # Esto asegura que si el usuario cambió el valor y se guardó, se cargue al recargar
+    st.session_state.iva_rate_input = default_iva
+    st.session_state.max_base_input = default_max_base
+    
+    # Callback para guardar IVA cuando cambia
+    def save_iva():
+        user_config = load_user_config()
+        user_config['iva_rate'] = st.session_state.iva_rate_input
+        save_user_config(user_config)
+    
+    # IVA - cuando usas key, Streamlit usa automáticamente el valor de session_state
     iva_rate = st.number_input(
         "IVA (%)",
         min_value=0.0,
         max_value=100.0,
-        value=st.session_state.iva_rate,
         step=0.1,
         help="Porcentaje de IVA a aplicar",
-        key='iva_rate_input'
+        key='iva_rate_input',
+        on_change=save_iva
     )
     
-    # Actualizar session_state cuando cambia
-    st.session_state.iva_rate = iva_rate
+    # Callback para guardar max_base cuando cambia
+    def save_max_base():
+        user_config = load_user_config()
+        user_config['max_base'] = st.session_state.max_base_input
+        save_user_config(user_config)
     
     # Límite máximo por factura
     max_base = st.number_input(
         "Límite máximo base imponible (€)",
         min_value=0.0,
-        value=st.session_state.max_base,
         step=10.0,
         help="Si una transacción supera este monto, se dividirá en múltiples facturas",
-        key='max_base_input'
+        key='max_base_input',
+        on_change=save_max_base
     )
-    
-    # Actualizar session_state cuando cambia
-    st.session_state.max_base = max_base
     
     st.markdown("---")
     st.markdown("### 📋 Datos de la Empresa")
