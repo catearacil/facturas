@@ -40,24 +40,38 @@ tab1, tab2 = st.tabs(["🔄 Generar Facturas", "📊 Historial"])
 with st.sidebar:
     st.header("⚙️ Configuración")
     
+    # Inicializar valores en session_state si no existen
+    if 'iva_rate' not in st.session_state:
+        st.session_state.iva_rate = config.IVA_RATE * 100
+    if 'max_base' not in st.session_state:
+        st.session_state.max_base = config.MAX_INVOICE_BASE
+    
     # IVA
     iva_rate = st.number_input(
         "IVA (%)",
         min_value=0.0,
         max_value=100.0,
-        value=config.IVA_RATE * 100,
+        value=st.session_state.iva_rate,
         step=0.1,
-        help="Porcentaje de IVA a aplicar"
+        help="Porcentaje de IVA a aplicar",
+        key='iva_rate_input'
     )
+    
+    # Actualizar session_state cuando cambia
+    st.session_state.iva_rate = iva_rate
     
     # Límite máximo por factura
     max_base = st.number_input(
         "Límite máximo base imponible (€)",
         min_value=0.0,
-        value=config.MAX_INVOICE_BASE,
+        value=st.session_state.max_base,
         step=10.0,
-        help="Si una transacción supera este monto, se dividirá en múltiples facturas"
+        help="Si una transacción supera este monto, se dividirá en múltiples facturas",
+        key='max_base_input'
     )
+    
+    # Actualizar session_state cuando cambia
+    st.session_state.max_base = max_base
     
     st.markdown("---")
     st.markdown("### 📋 Datos de la Empresa")
