@@ -5,8 +5,8 @@ Configuración del generador de facturas
 # Configuración de IVA
 IVA_RATE = 0.21  # 21%
 
-# Límite máximo de base imponible por factura
-MAX_INVOICE_BASE = 400.00  # €
+# Límite máximo de TOTAL (con IVA) por factura
+MAX_INVOICE_BASE = 400.00  # € (este es el límite del TOTAL con IVA incluido)
 
 # Formato de numeración de facturas
 INVOICE_NUMBER_FORMAT = "T{year}{number:04d}"  # Ej: T260001, T260002
