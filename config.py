@@ -31,3 +31,6 @@ COMPANY_DATA = {
 
 # Tagline de la empresa
 COMPANY_TAGLINE = "Tennis & Padel training in Mallorca"
+
+# Concepto fijo para todas las facturas
+INVOICE_CONCEPT = "Consultoría de Tenis"

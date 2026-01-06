@@ -220,7 +220,8 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
     # Si tenemos el importe con IVA guardado, usarlo; si no, calcularlo
     total = invoice_data.get('importe_con_iva', base_imponible + iva_amount)
     
-    concepto = invoice_data.get('concepto', 'Sin concepto')
+    # Usar siempre el concepto fijo de la configuración
+    concepto = config.INVOICE_CONCEPT
     
     # Headers de la tabla - según la imagen: CONCEPTO izquierda, resto centrados
     table_data = [
