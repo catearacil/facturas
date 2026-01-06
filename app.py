@@ -55,6 +55,15 @@ st.set_page_config(
     layout="wide"
 )
 
+# Inicializar base de datos al inicio (si está disponible)
+try:
+    from src.db_manager import init_database
+    init_database()
+except Exception as e:
+    # Si falla la inicialización, la app seguirá funcionando con JSON como fallback
+    # No mostramos el warning aquí para no molestar al usuario, el sistema usará fallback automáticamente
+    pass
+
 # Título principal
 st.title("📄 Generador de Facturas")
 st.markdown("---")
@@ -419,7 +428,20 @@ with tab1:
                         st.dataframe(df_display, use_container_width=True, hide_index=True)
                         
                         # Botón para descargar CSV de esta categoría
-                        csv = df_excluded.to_csv(index=False, encoding='utf-8-sig')
+                        # Asegurar que la fecha esté presente y en el orden correcto
+                        if 'fecha' in df_excluded.columns:
+                            # Reordenar columnas para que fecha esté primero
+                            column_order = ['fecha', 'concepto', 'importe']
+                            # Agregar otras columnas que puedan existir
+                            for col in df_excluded.columns:
+                                if col not in column_order:
+                                    column_order.append(col)
+                            # Filtrar solo las columnas que existen
+                            column_order = [col for col in column_order if col in df_excluded.columns]
+                            df_excluded_ordered = df_excluded[column_order]
+                        else:
+                            df_excluded_ordered = df_excluded
+                        csv = df_excluded_ordered.to_csv(index=False, encoding='utf-8-sig')
                         st.download_button(
                             label=f"📥 Descargar {razon} (CSV)",
                             data=csv,
@@ -430,7 +452,20 @@ with tab1:
                 
                 # Botón para descargar todas las excluidas
                 df_all_excluded = pd.DataFrame(excluded)
-                csv_all = df_all_excluded.to_csv(index=False, encoding='utf-8-sig')
+                # Asegurar que la fecha esté presente y en el orden correcto
+                if 'fecha' in df_all_excluded.columns:
+                    # Reordenar columnas para que fecha esté primero
+                    column_order = ['fecha', 'concepto', 'importe', 'razon']
+                    # Agregar otras columnas que puedan existir
+                    for col in df_all_excluded.columns:
+                        if col not in column_order:
+                            column_order.append(col)
+                    # Filtrar solo las columnas que existen
+                    column_order = [col for col in column_order if col in df_all_excluded.columns]
+                    df_all_excluded_ordered = df_all_excluded[column_order]
+                else:
+                    df_all_excluded_ordered = df_all_excluded
+                csv_all = df_all_excluded_ordered.to_csv(index=False, encoding='utf-8-sig')
                 st.download_button(
                     label="📥 Descargar Todas las Transacciones Excluidas (CSV)",
                     data=csv_all,
@@ -489,7 +524,20 @@ with tab1:
                 # Botón para descargar CSV
                 # Restaurar valores numéricos para el CSV
                 df_split_csv = pd.DataFrame(split_trans)
-                csv_split = df_split_csv.to_csv(index=False, encoding='utf-8-sig')
+                # Asegurar que la fecha esté presente y en el orden correcto
+                if 'fecha' in df_split_csv.columns:
+                    # Reordenar columnas para que fecha esté primero
+                    column_order = ['fecha', 'concepto', 'importe_original', 'num_facturas', 'limite_aplicado']
+                    # Agregar otras columnas que puedan existir
+                    for col in df_split_csv.columns:
+                        if col not in column_order:
+                            column_order.append(col)
+                    # Filtrar solo las columnas que existen
+                    column_order = [col for col in column_order if col in df_split_csv.columns]
+                    df_split_csv_ordered = df_split_csv[column_order]
+                else:
+                    df_split_csv_ordered = df_split_csv
+                csv_split = df_split_csv_ordered.to_csv(index=False, encoding='utf-8-sig')
                 st.download_button(
                     label="📥 Descargar Transacciones Divididas (CSV)",
                     data=csv_split,

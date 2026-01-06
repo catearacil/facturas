@@ -1,52 +1,71 @@
-# facturas
+# Generador de Facturas - MallorCamp
 
-# Generador de Facturas desde Extracto Bancario Santander
-
-Aplicación web para procesar extractos bancarios de Santander y generar facturas simplificadas en PDF con el formato de MallorCamp.
-
-## Características
-
-- ✅ Procesa extractos bancarios de Santander en formato Excel
-- ✅ Filtra automáticamente solo transacciones de ingreso
-- ✅ Divide transacciones mayores a 500€ en múltiples facturas
-- ✅ Calcula IVA del 21% automáticamente
-- ✅ Genera facturas en PDF con formato profesional
-- ✅ Interfaz web intuitiva con Streamlit
-- ✅ Descarga de facturas individuales o en ZIP
-
-## Columnas del Extracto Santander
-
-El sistema reconoce automáticamente las siguientes columnas del extracto:
-- **Fecha Operación**: Fecha de la transacción
-- **Concepto**: Descripción de la transacción
-- **Importe**: Cantidad (positivo = ingreso, negativo = gasto)
-- Otras columnas: Fecha Valor, Divisa, Saldo, Código, Referencias, etc. (no se usan para facturas)
+Aplicación para generar facturas desde extractos bancarios de Santander.
 
 ## Instalación
 
-1. Clonar o descargar el proyecto
+1. Clonar el repositorio
 2. Instalar dependencias:
 
 ```bash
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
+```
+
+3. Configurar base de datos (opcional pero recomendado):
+
+```bash
+# Copiar el archivo de ejemplo
+cp .env.example .env
+
+# Editar .env con tus credenciales de Neon
+# O simplemente usar la cadena de conexión que ya está en el código
 ```
 
 ## Uso
 
-### Interfaz Web (Recomendado)
-
-Ejecutar la aplicación Streamlit:
+### Aplicación Web (Streamlit)
 
 ```bash
-streamlit run app.py
+python3 -m streamlit run app.py
 ```
 
-La aplicación se abrirá en el navegador. Sube tu archivo Excel del extracto Santander y sigue las instrucciones.
-
-### Línea de Comandos (Opcional)
+O usando el script de conveniencia:
 
 ```bash
-python src/main.py input/extracto.xlsx
+./run.sh
+```
+
+### CLI (Línea de comandos)
+
+```bash
+python3 src/main.py input/extracto.xlsx -o output
+```
+
+## Configuración de Base de Datos
+
+### Desarrollo Local
+
+1. Crear archivo `.env` en la raíz del proyecto:
+
+```bash
+cp .env.example .env
+```
+
+2. Editar `.env` con tu cadena de conexión de Neon:
+
+```
+DATABASE_URL=postgresql://usuario:password@host/database?sslmode=require
+```
+
+**Nota:** Si no creas el archivo `.env`, la aplicación usará la cadena de conexión por defecto configurada en el código.
+
+### Streamlit Cloud
+
+1. Ve a Settings → Secrets en tu app
+2. Añade:
+
+```toml
+DATABASE_URL = "postgresql://usuario:password@host/database?sslmode=require"
 ```
 
 ## Estructura del Proyecto
@@ -54,27 +73,36 @@ python src/main.py input/extracto.xlsx
 ```
 facturador/
 ├── src/
-│   ├── santander_reader.py   # Lectura de extractos
-│   ├── invoice_splitter.py   # División de facturas
-│   ├── invoice_generator.py  # Generación de PDFs
-│   └── main.py               # Script CLI
-├── app.py                    # Aplicación Streamlit
-├── config.py                 # Configuración
-├── input/                    # Archivos Excel de entrada
-└── output/                   # Facturas generadas
+│   ├── santander_reader.py    # Lee extractos Excel de Santander
+│   ├── invoice_splitter.py    # Divide transacciones grandes
+│   ├── invoice_generator.py   # Genera PDFs de facturas
+│   ├── history_manager.py      # Gestiona historial (BD o JSON)
+│   ├── db_manager.py          # Gestión de conexión PostgreSQL
+│   └── main.py                # Script CLI opcional
+├── assets/
+│   └── logo.png               # Logo de MallorCamp
+├── input/                     # Directorio para archivos Excel
+├── output/                    # Directorio de salida
+│   ├── history/               # Historial (si usa JSON)
+│   └── user_config.json       # Configuración del usuario
+├── app.py                     # Aplicación Streamlit principal
+├── config.py                  # Configuración global
+├── requirements.txt           # Dependencias Python
+└── .env                       # Variables de entorno (no se sube a Git)
 ```
 
-## Requisitos
+## Características
 
-- Python 3.8+
-- pandas
-- openpyxl
-- reportlab
-- streamlit
+- ✅ Lectura automática de extractos Excel de Santander
+- ✅ Detección inteligente de columnas
+- ✅ División automática de transacciones grandes
+- ✅ Generación de PDFs con formato MallorCamp
+- ✅ Historial persistente en PostgreSQL (Neon)
+- ✅ Interfaz web con Streamlit
+- ✅ Exportación de transacciones excluidas/divididas
 
 ## Notas
 
-- Solo se procesan transacciones de ingreso (valores positivos en columna "Importe")
-- Las transacciones mayores a 500€ se dividen automáticamente
-- El IVA se calcula sobre la base imponible (21%)
-- Las facturas se numeran consecutivamente: T260001, T260002, etc.
+- El historial se guarda en PostgreSQL para persistencia entre reinicios
+- Si la BD no está disponible, se usa JSON como fallback automático
+- Los archivos PDF se generan en `output/` o en directorios temporales

@@ -26,6 +26,10 @@ wheels/
 # Streamlit
 .streamlit/secrets.toml
 
+# Variables de entorno
+.env
+.env.local
+
 # Archivos temporales
 *.tmp
 *.log

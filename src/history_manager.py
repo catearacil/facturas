@@ -1,5 +1,6 @@
 """
 Módulo para gestionar el historial de facturas generadas
+Usa PostgreSQL (Neon) para persistencia
 """
 
 import json
@@ -9,12 +10,26 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from pathlib import Path
 
+# Intentar importar el gestor de BD, si falla usar JSON como fallback
+try:
+    from src.db_manager import (
+        load_history_from_db, 
+        save_history_to_db, 
+        delete_from_db as delete_from_db_func,
+        delete_month_from_db as delete_month_from_db_func,
+        init_database
+    )
+    USE_DATABASE = True
+except ImportError:
+    USE_DATABASE = False
+    print("Advertencia: No se pudo importar db_manager, usando JSON como fallback")
+
 
 HISTORY_FILE = "history.json"
 
 
 def get_history_path() -> str:
-    """Obtiene la ruta del archivo de historial"""
+    """Obtiene la ruta del archivo de historial (fallback)"""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     history_dir = os.path.join(base_dir, 'output', 'history')
     os.makedirs(history_dir, exist_ok=True)
@@ -22,7 +37,16 @@ def get_history_path() -> str:
 
 
 def load_history() -> List[Dict]:
-    """Carga el historial desde el archivo JSON"""
+    """Carga el historial desde la base de datos o archivo JSON (fallback)"""
+    if USE_DATABASE:
+        try:
+            return load_history_from_db()
+        except Exception as e:
+            print(f"Error cargando desde BD, usando JSON fallback: {e}")
+            # Fallback a JSON
+            pass
+    
+    # Fallback: cargar desde JSON
     history_path = get_history_path()
     if os.path.exists(history_path):
         try:
@@ -34,13 +58,13 @@ def load_history() -> List[Dict]:
 
 
 def save_history(history: List[Dict]):
-    """Guarda el historial en el archivo JSON"""
-    history_path = get_history_path()
-    try:
-        with open(history_path, 'w', encoding='utf-8') as f:
-            json.dump(history, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"Error guardando historial: {e}")
+    """
+    Guarda el historial. 
+    Nota: Esta función ya no se usa directamente, se usa add_to_history que guarda individualmente.
+    Se mantiene para compatibilidad.
+    """
+    # Ya no guardamos todo el historial de una vez, se guarda registro por registro
+    pass
 
 
 def add_to_history(
@@ -56,7 +80,7 @@ def add_to_history(
     processing_info: Dict = None
 ) -> Dict:
     """
-    Añade un nuevo registro al historial
+    Añade un nuevo registro al historial (en base de datos o JSON)
     
     Args:
         invoice_count: Número de facturas generadas
@@ -72,11 +96,7 @@ def add_to_history(
     Returns:
         Diccionario con el registro añadido
     """
-    history = load_history()
-    
     record = {
-        'id': len(history) + 1,
-        'timestamp': datetime.now().isoformat(),
         'date': datetime.now().strftime('%Y-%m-%d'),
         'month': datetime.now().strftime('%Y-%m'),
         'invoice_count': invoice_count,
@@ -89,18 +109,40 @@ def add_to_history(
                 'filename': inv['filename'],
                 'path': inv['path'],
                 'base': inv['invoice']['base_imponible'],
-                'total': inv['invoice']['base_imponible'] * (1 + iva_rate)
+                'total': inv['invoice'].get('importe_con_iva', inv['invoice']['base_imponible'] * (1 + iva_rate))
             }
             for inv in invoice_files
         ],
         'output_dir': output_dir,
         'excluded_transactions': excluded_transactions or [],
         'split_transactions': split_transactions or [],
-        'processing_info': processing_info or {}
+        'processing_info': processing_info or {},
+        'iva_rate': iva_rate
     }
     
+    if USE_DATABASE:
+        try:
+            record_id = save_history_to_db(record)
+            record['id'] = record_id
+            record['timestamp'] = datetime.now().isoformat()
+            return record
+        except Exception as e:
+            print(f"Error guardando en BD, usando JSON fallback: {e}")
+            # Fallback a JSON
+            pass
+    
+    # Fallback: guardar en JSON
+    history = load_history()
+    record['id'] = len(history) + 1
+    record['timestamp'] = datetime.now().isoformat()
     history.append(record)
-    save_history(history)
+    
+    history_path = get_history_path()
+    try:
+        with open(history_path, 'w', encoding='utf-8') as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Error guardando historial: {e}")
     
     return record
 
@@ -160,6 +202,15 @@ def delete_from_history(record_id: int) -> bool:
     Returns:
         True si se eliminó correctamente, False si no se encontró
     """
+    if USE_DATABASE:
+        try:
+            return delete_from_db_func(record_id)
+        except Exception as e:
+            print(f"Error eliminando de BD, usando JSON fallback: {e}")
+            # Fallback a JSON
+            pass
+    
+    # Fallback: eliminar de JSON
     history = load_history()
     original_count = len(history)
     
@@ -167,8 +218,13 @@ def delete_from_history(record_id: int) -> bool:
     history = [r for r in history if r.get('id') != record_id]
     
     if len(history) < original_count:
-        save_history(history)
-        return True
+        history_path = get_history_path()
+        try:
+            with open(history_path, 'w', encoding='utf-8') as f:
+                json.dump(history, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            print(f"Error guardando historial: {e}")
     return False
 
 
@@ -182,6 +238,15 @@ def delete_month_from_history(month: str) -> int:
     Returns:
         Número de registros eliminados
     """
+    if USE_DATABASE:
+        try:
+            return delete_month_from_db_func(month)
+        except Exception as e:
+            print(f"Error eliminando mes de BD, usando JSON fallback: {e}")
+            # Fallback a JSON
+            pass
+    
+    # Fallback: eliminar de JSON
     history = load_history()
     original_count = len(history)
     
@@ -190,7 +255,12 @@ def delete_month_from_history(month: str) -> int:
     
     deleted_count = original_count - len(history)
     if deleted_count > 0:
-        save_history(history)
+        history_path = get_history_path()
+        try:
+            with open(history_path, 'w', encoding='utf-8') as f:
+                json.dump(history, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Error guardando historial: {e}")
     
     return deleted_count
 
