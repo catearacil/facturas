@@ -424,8 +424,8 @@ def generate_invoices(invoices: list, output_dir: str, start_number: int = 1) ->
         # Generar número de factura
         invoice_number = generate_invoice_number(current_year, current_number)
         
-        # Nombre del archivo
-        filename = f"FAC-{invoice_number}.pdf"
+        # Nombre del archivo: usar directamente el número de factura
+        filename = f"{invoice_number}.pdf"
         filepath = os.path.join(output_dir, filename)
         
         # Generar PDF
