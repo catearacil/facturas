@@ -250,3 +250,36 @@ def get_last_invoice_number(year: int) -> int:
     
     return last_number
 
+
+def get_last_year_with_invoices() -> Optional[int]:
+    """
+    Obtiene el último año que tiene facturas generadas (del historial o configuración).
+    
+    Returns:
+        Año más reciente con facturas, o None si no hay ninguna
+    """
+    import config
+    
+    last_year = None
+    last_number = 0
+    
+    # Buscar en el historial
+    history = load_history()
+    for record in history:
+        invoice_files = record.get('invoice_files', [])
+        for inv_file in invoice_files:
+            invoice_number = inv_file.get('number', '')
+            match = re.match(r'T(\d{2})', invoice_number)
+            if match:
+                invoice_year = 2000 + int(match.group(1))
+                number = extract_invoice_number(invoice_number)
+                if number and number > last_number:
+                    last_number = number
+                    last_year = invoice_year
+    
+    # Si no hay historial, buscar en la configuración
+    if last_year is None and config.LAST_INVOICE_NUMBERS:
+        last_year = max(config.LAST_INVOICE_NUMBERS.keys())
+    
+    return last_year
+

@@ -186,14 +186,26 @@ with tab1:
                             # Crear directorio de salida temporal
                             output_dir = tempfile.mkdtemp()
                             
-                            # Obtener el último número de factura usado para el año actual
-                            from src.history_manager import get_last_invoice_number
-                            current_year = datetime.now().year
-                            last_number = get_last_invoice_number(current_year)
+                            # Obtener el último año con facturas y continuar desde ahí
+                            from src.history_manager import get_last_invoice_number, get_last_year_with_invoices
+                            
+                            # Buscar el último año que tiene facturas
+                            last_year = get_last_year_with_invoices()
+                            if last_year is None:
+                                # Si no hay historial, usar el año actual
+                                last_year = datetime.now().year
+                            
+                            # Obtener el último número usado para ese año
+                            last_number = get_last_invoice_number(last_year)
+                            
+                            # Si no hay número para ese año, empezar desde 1
+                            if last_number == 0:
+                                last_number = 0
+                            
                             start_number = last_number + 1  # Continuar desde el siguiente
                             
-                            # Generar facturas
-                            generated = generate_invoices(invoices, output_dir, start_number=start_number)
+                            # Generar facturas usando el último año encontrado
+                            generated = generate_invoices(invoices, output_dir, start_number=start_number, year=last_year)
                             
                             # Restaurar configuración original
                             config.IVA_RATE = original_iva
@@ -283,12 +295,14 @@ with tab1:
         invoices_data = []
         for inv in st.session_state.invoices_generated:
             base = inv['invoice']['base_imponible']
+            # El IVA se calcula desde la base imponible
             iva = base * (iva_rate / 100)
-            total = base + iva
+            # El total debe usar importe_con_iva si existe (ya incluye IVA), si no calcularlo
+            total = inv['invoice'].get('importe_con_iva', base + iva)
             invoices_data.append({
                 'Número': inv['number'],
                 'Fecha': inv['invoice']['fecha'],
-                'Concepto': inv['invoice']['concepto'][:50] + '...' if len(inv['invoice']['concepto']) > 50 else inv['invoice']['concepto'],
+                'Concepto': inv['invoice'].get('concepto', 'Consultoría de Tenis')[:50] + '...' if len(inv['invoice'].get('concepto', 'Consultoría de Tenis')) > 50 else inv['invoice'].get('concepto', 'Consultoría de Tenis'),
                 'Base': f"{base:,.2f} €",
                 'IVA': f"{iva:,.2f} €",
                 'Total': f"{total:,.2f} €"

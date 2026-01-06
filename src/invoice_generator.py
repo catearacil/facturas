@@ -401,7 +401,7 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
     doc.build(story, onFirstPage=on_first_page, onLaterPages=on_first_page)
 
 
-def generate_invoices(invoices: list, output_dir: str, start_number: int = 1) -> list:
+def generate_invoices(invoices: list, output_dir: str, start_number: int = 1, year: int = None) -> list:
     """
     Genera múltiples facturas en PDF.
     
@@ -409,6 +409,7 @@ def generate_invoices(invoices: list, output_dir: str, start_number: int = 1) ->
         invoices: Lista de facturas a generar (cada una con 'fecha', 'concepto', 'base_imponible')
         output_dir: Directorio donde guardar los PDFs
         start_number: Número inicial para la numeración
+        year: Año para la numeración (si no se proporciona, usa el año actual)
         
     Returns:
         Lista de rutas de los archivos generados
@@ -417,7 +418,8 @@ def generate_invoices(invoices: list, output_dir: str, start_number: int = 1) ->
         os.makedirs(output_dir)
     
     generated_files = []
-    current_year = datetime.now().year
+    # Usar el año proporcionado o el año actual
+    current_year = year if year is not None else datetime.now().year
     current_number = start_number
     
     for invoice in invoices:
