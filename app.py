@@ -195,8 +195,10 @@ with tab1:
                             
                             # Calcular resumen
                             total_base = sum(inv['base_imponible'] for inv in invoices)
+                            # El IVA ya está incluido en el importe original, así que calculamos el IVA desde la base
                             total_iva = sum(inv['base_imponible'] * (iva_rate / 100) for inv in invoices)
-                            total_amount = total_base + total_iva
+                            # Si las facturas tienen importe_con_iva, usarlo; si no, calcularlo
+                            total_amount = sum(inv.get('importe_con_iva', inv['base_imponible'] * (1 + iva_rate / 100)) for inv in invoices)
                             
                             # Guardar en sesión
                             st.session_state.invoices_generated = generated

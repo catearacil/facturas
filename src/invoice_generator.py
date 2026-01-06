@@ -50,8 +50,10 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
     """
     # Calcular valores para el footer
     base_imponible = invoice_data['base_imponible']
+    # El importe original ya incluye IVA, así que calculamos el IVA y el total
     iva_amount = base_imponible * config.IVA_RATE
-    total = base_imponible + iva_amount
+    # Si tenemos el importe con IVA guardado, usarlo; si no, calcularlo
+    total = invoice_data.get('importe_con_iva', base_imponible + iva_amount)
     
     # Función para dibujar el footer en cada página (al final de la página)
     def on_first_page(canvas, doc):
@@ -215,7 +217,8 @@ def create_invoice_pdf(invoice_data: Dict, invoice_number: str, output_path: str
     # TABLA DE CONCEPTOS
     base_imponible = invoice_data['base_imponible']
     iva_amount = base_imponible * config.IVA_RATE
-    total = base_imponible + iva_amount
+    # Si tenemos el importe con IVA guardado, usarlo; si no, calcularlo
+    total = invoice_data.get('importe_con_iva', base_imponible + iva_amount)
     
     concepto = invoice_data.get('concepto', 'Sin concepto')
     

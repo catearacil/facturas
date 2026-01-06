@@ -326,10 +326,16 @@ def filter_income_transactions(df: pd.DataFrame, columns: Dict[str, Optional[str
             
             # Solo procesar ingresos (valores positivos)
             if importe > 0:
+                # El importe del Excel YA incluye IVA, así que calculamos la base imponible
+                # Base imponible = Importe con IVA / (1 + IVA_RATE)
+                import config
+                base_imponible = importe / (1 + config.IVA_RATE)
+                
                 transactions.append({
                     'fecha': fecha,
                     'concepto': concepto,
-                    'importe': importe  # Este es la base imponible (sin IVA)
+                    'importe': base_imponible,  # Base imponible (sin IVA, calculada desde el importe con IVA)
+                    'importe_con_iva': importe  # Guardamos también el importe original con IVA
                 })
             else:
                 # Registrar transacción excluida

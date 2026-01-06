@@ -28,43 +28,61 @@ def split_transaction(transaction: Dict, max_base: float = None) -> List[Dict]:
     base_imponible = transaction['importe']
     fecha = transaction['fecha']
     concepto = transaction['concepto']
+    # Obtener el importe con IVA si existe (para preservarlo al dividir)
+    importe_con_iva = transaction.get('importe_con_iva')
     
     invoices = []
     
     # Si la base es menor o igual al límite, una sola factura
     if base_imponible <= max_base:
-        invoices.append({
+        invoice_data = {
             'fecha': fecha,
             'concepto': concepto,
             'base_imponible': base_imponible,
             'original_amount': base_imponible,
             'part_number': 1,
             'total_parts': 1
-        })
+        }
+        # Preservar el importe con IVA si existe
+        if importe_con_iva:
+            invoice_data['importe_con_iva'] = importe_con_iva
+        invoices.append(invoice_data)
     else:
         # Dividir en múltiples facturas
         num_invoices = int(base_imponible / max_base)
         if base_imponible % max_base > 0:
             num_invoices += 1
         
-        # Calcular el importe por factura
+        # Calcular el importe por factura (base imponible)
         amount_per_invoice = base_imponible / num_invoices
+        
+        # Si tenemos importe con IVA, también dividirlo proporcionalmente
+        importe_con_iva_per_invoice = importe_con_iva / num_invoices if importe_con_iva else None
         
         for i in range(num_invoices):
             # Para la última factura, usar el resto para evitar errores de redondeo
             if i == num_invoices - 1:
                 invoice_base = base_imponible - (amount_per_invoice * (num_invoices - 1))
+                if importe_con_iva:
+                    invoice_total = importe_con_iva - (importe_con_iva_per_invoice * (num_invoices - 1))
+                else:
+                    invoice_total = None
             else:
                 invoice_base = amount_per_invoice
+                invoice_total = importe_con_iva_per_invoice if importe_con_iva else None
             
-            invoices.append({
+            invoice_data = {
                 'fecha': fecha,
                 'concepto': concepto,
                 'base_imponible': round(invoice_base, 2),
                 'original_amount': base_imponible,
                 'part_number': i + 1,
                 'total_parts': num_invoices
-            })
+            }
+            # Preservar el importe con IVA si existe
+            if invoice_total:
+                invoice_data['importe_con_iva'] = round(invoice_total, 2)
+            invoices.append(invoice_data)
     
     return invoices
 
