@@ -4,8 +4,9 @@ Módulo para gestionar el historial de facturas generadas
 
 import json
 import os
+import re
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
 from pathlib import Path
 
 
@@ -192,4 +193,60 @@ def delete_month_from_history(month: str) -> int:
         save_history(history)
     
     return deleted_count
+
+
+def extract_invoice_number(invoice_number_str: str) -> Optional[int]:
+    """
+    Extrae el número de factura del formato T250263
+    Ejemplo: T250263 -> 263
+    
+    Args:
+        invoice_number_str: Número de factura en formato T{year}{number:04d}
+        
+    Returns:
+        Número de factura (int) o None si no se puede parsear
+    """
+    # Patrón: T seguido de 2 dígitos (año) y 4 dígitos (número)
+    match = re.match(r'T\d{2}(\d{4})', invoice_number_str)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def get_last_invoice_number(year: int) -> int:
+    """
+    Obtiene el último número de factura usado para un año específico.
+    Busca en el historial y en la configuración.
+    
+    Args:
+        year: Año (ej: 2025)
+        
+    Returns:
+        Último número de factura usado, o 0 si no hay historial
+    """
+    import config
+    
+    # Primero, buscar en el historial
+    history = load_history()
+    last_number = 0
+    
+    # Buscar en todos los registros del historial
+    for record in history:
+        invoice_files = record.get('invoice_files', [])
+        for inv_file in invoice_files:
+            invoice_number = inv_file.get('number', '')
+            # Extraer el año del número de factura (T250263 -> año 25 = 2025)
+            match = re.match(r'T(\d{2})', invoice_number)
+            if match:
+                invoice_year = 2000 + int(match.group(1))
+                if invoice_year == year:
+                    number = extract_invoice_number(invoice_number)
+                    if number and number > last_number:
+                        last_number = number
+    
+    # Si no se encontró en el historial, usar la configuración
+    if last_number == 0:
+        last_number = config.LAST_INVOICE_NUMBERS.get(year, 0)
+    
+    return last_number
 

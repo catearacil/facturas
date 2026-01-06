@@ -11,6 +11,14 @@ MAX_INVOICE_BASE = 400.00  # €
 # Formato de numeración de facturas
 INVOICE_NUMBER_FORMAT = "T{year}{number:04d}"  # Ej: T260001, T260002
 
+# Último número de factura usado por año (para continuar la numeración)
+# Formato: {año: último_número}
+# Ejemplo: Si la última factura de 2025 fue T250263, poner: 2025: 263
+LAST_INVOICE_NUMBERS = {
+    2025: 263,  # Última factura del 2025: T250263
+    # Para 2026 y siguientes, se calculará automáticamente desde el historial
+}
+
 # Datos de la empresa
 COMPANY_DATA = {
     "name": "MALLORCAMP SPORT SL.",

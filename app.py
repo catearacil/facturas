@@ -186,8 +186,14 @@ with tab1:
                             # Crear directorio de salida temporal
                             output_dir = tempfile.mkdtemp()
                             
+                            # Obtener el último número de factura usado para el año actual
+                            from src.history_manager import get_last_invoice_number
+                            current_year = datetime.now().year
+                            last_number = get_last_invoice_number(current_year)
+                            start_number = last_number + 1  # Continuar desde el siguiente
+                            
                             # Generar facturas
-                            generated = generate_invoices(invoices, output_dir, start_number=1)
+                            generated = generate_invoices(invoices, output_dir, start_number=start_number)
                             
                             # Restaurar configuración original
                             config.IVA_RATE = original_iva
