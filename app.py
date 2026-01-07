@@ -11,6 +11,7 @@ import base64
 import json
 from datetime import datetime
 from pathlib import Path
+from io import BytesIO
 
 # Importar módulos del proyecto
 import sys
@@ -310,7 +311,7 @@ with tab1:
             total = inv['invoice'].get('importe_con_iva', base + iva)
             invoices_data.append({
                 'Número': inv['number'],
-                'Fecha': inv['invoice']['fecha'],
+                'Fecha': inv['invoice'].get('fecha', 'N/A'),
                 'Concepto': inv['invoice'].get('concepto', 'Consultoría de Tenis')[:50] + '...' if len(inv['invoice'].get('concepto', 'Consultoría de Tenis')) > 50 else inv['invoice'].get('concepto', 'Consultoría de Tenis'),
                 'Base': f"{base:,.2f} €",
                 'IVA': f"{iva:,.2f} €",
@@ -319,6 +320,37 @@ with tab1:
         
         df_invoices = pd.DataFrame(invoices_data)
         st.dataframe(df_invoices, use_container_width=True, hide_index=True)
+        
+        # Crear versión para Excel con valores numéricos
+        invoices_data_excel = []
+        for inv in st.session_state.invoices_generated:
+            base = inv['invoice']['base_imponible']
+            iva = base * (iva_rate / 100)
+            total = inv['invoice'].get('importe_con_iva', base + iva)
+            invoices_data_excel.append({
+                'Número': inv['number'],
+                'Fecha': inv['invoice'].get('fecha', 'N/A'),
+                'Concepto': inv['invoice'].get('concepto', 'Consultoría de Tenis'),
+                'Base': base,
+                'IVA': iva,
+                'Total': total
+            })
+        df_invoices_excel = pd.DataFrame(invoices_data_excel)
+        
+        # Botón para descargar tabla como Excel
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_invoices_excel.to_excel(writer, index=False, sheet_name='Facturas')
+        excel_data = output.getvalue()
+        
+        st.download_button(
+            label="📥 Descargar Tabla como Excel",
+            data=excel_data,
+            file_name=f"tabla_facturas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="download_invoices_table_excel"
+        )
         
         st.markdown("---")
         
@@ -676,9 +708,10 @@ with tab2:
                             # Crear tabla de facturas
                             invoices_table_data = []
                             for inv_file in record['invoice_files']:
+                                fecha = inv_file.get('fecha', '') or 'N/A'
                                 invoices_table_data.append({
                                     'Número': inv_file['number'],
-                                    'Fecha': inv_file.get('fecha', 'N/A'),
+                                    'Fecha': fecha,
                                     'Base': f"{inv_file['base']:,.2f} €",
                                     'Total': f"{inv_file['total']:,.2f} €",
                                     'Archivo': inv_file['filename']
@@ -686,6 +719,34 @@ with tab2:
                             
                             df_invoices = pd.DataFrame(invoices_table_data)
                             st.dataframe(df_invoices, use_container_width=True, hide_index=True)
+                            
+                            # Crear versión para Excel con valores numéricos
+                            invoices_table_data_excel = []
+                            for inv_file in record['invoice_files']:
+                                fecha = inv_file.get('fecha', '') or 'N/A'
+                                invoices_table_data_excel.append({
+                                    'Número': inv_file['number'],
+                                    'Fecha': fecha,
+                                    'Base': inv_file['base'],
+                                    'Total': inv_file['total'],
+                                    'Archivo': inv_file['filename']
+                                })
+                            df_invoices_excel = pd.DataFrame(invoices_table_data_excel)
+                            
+                            # Botón para descargar tabla como Excel
+                            output = BytesIO()
+                            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                                df_invoices_excel.to_excel(writer, index=False, sheet_name='Facturas')
+                            excel_data = output.getvalue()
+                            
+                            st.download_button(
+                                label="📥 Descargar Tabla como Excel",
+                                data=excel_data,
+                                file_name=f"tabla_facturas_{record['date']}_{record['id']}.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                use_container_width=True,
+                                key=f"download_hist_table_excel_{record['id']}_{idx}"
+                            )
                             
                             st.markdown("**Descargar facturas:**")
                             # Botones de descarga
