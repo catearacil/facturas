@@ -678,6 +678,7 @@ with tab2:
                             for inv_file in record['invoice_files']:
                                 invoices_table_data.append({
                                     'Número': inv_file['number'],
+                                    'Fecha': inv_file.get('fecha', 'N/A'),
                                     'Base': f"{inv_file['base']:,.2f} €",
                                     'Total': f"{inv_file['total']:,.2f} €",
                                     'Archivo': inv_file['filename']

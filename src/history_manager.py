@@ -109,7 +109,8 @@ def add_to_history(
                 'filename': inv['filename'],
                 'path': inv['path'],
                 'base': inv['invoice']['base_imponible'],
-                'total': inv['invoice'].get('importe_con_iva', inv['invoice']['base_imponible'] * (1 + iva_rate))
+                'total': inv['invoice'].get('importe_con_iva', inv['invoice']['base_imponible'] * (1 + iva_rate)),
+                'fecha': inv['invoice'].get('fecha', '')
             }
             for inv in invoice_files
         ],
