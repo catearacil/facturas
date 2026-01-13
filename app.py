@@ -406,21 +406,24 @@ with tab1:
         with col2:
             st.subheader("📦 Descargar Todas las Facturas")
             
-            # Crear ZIP con todas las facturas
-            if st.button("📥 Descargar ZIP con todas las facturas", use_container_width=True):
-                zip_path = os.path.join(summary['output_dir'], 'facturas.zip')
-                with zipfile.ZipFile(zip_path, 'w') as zipf:
-                    for inv in st.session_state.invoices_generated:
-                        zipf.write(inv['path'], inv['filename'])
-                
-                with open(zip_path, 'rb') as zip_file:
-                    st.download_button(
-                        label="⬇️ Descargar ZIP",
-                        data=zip_file.read(),
-                        file_name=f"facturas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
-                        mime="application/zip",
-                        use_container_width=True
-                    )
+            # Crear ZIP con todas las facturas en memoria y descargarlo directamente
+            zip_buffer = BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for inv in st.session_state.invoices_generated:
+                    # Leer el archivo PDF y agregarlo al ZIP
+                    with open(inv['path'], 'rb') as pdf_file:
+                        zipf.writestr(inv['filename'], pdf_file.read())
+            
+            zip_buffer.seek(0)
+            
+            st.download_button(
+                label="📥 Descargar ZIP con todas las facturas",
+                data=zip_buffer.getvalue(),
+                file_name=f"facturas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
+                mime="application/zip",
+                use_container_width=True,
+                key="download_all_invoices_zip"
+            )
             
             # Descargas individuales
             st.markdown("### 📄 Descargas Individuales")
