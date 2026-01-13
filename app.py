@@ -199,23 +199,40 @@ with tab1:
                             # Obtener el último año con facturas y continuar desde ahí
                             from src.history_manager import get_last_invoice_number, get_last_year_with_invoices
                             
-                            # Buscar el último año que tiene facturas
+                            # Determinar el año a usar:
+                            # 1. Primero buscar en el historial (si hay facturas previas)
+                            # 2. Si no hay historial, usar el año de la configuración (2025)
+                            #    Esto asegura que después de limpiar la BD, se use el año correcto
+                            # 3. Si no hay configuración, usar el año actual como último recurso
+                            
+                            # Buscar el último año que tiene facturas en el historial
                             last_year = get_last_year_with_invoices()
-                            if last_year is None:
-                                # Si no hay historial, usar el año actual
-                                last_year = datetime.now().year
+                            
+                            # Decidir qué año usar
+                            if last_year is not None:
+                                # Si hay historial, usar ese año (continuar la numeración)
+                                target_year = last_year
+                            elif config.LAST_INVOICE_NUMBERS:
+                                # Si no hay historial, usar el año de la configuración
+                                # Esto es importante después de limpiar la BD
+                                target_year = max(config.LAST_INVOICE_NUMBERS.keys())
+                            else:
+                                # Último recurso: año actual
+                                target_year = datetime.now().year
                             
                             # Obtener el último número usado para ese año
-                            last_number = get_last_invoice_number(last_year)
+                            last_number = get_last_invoice_number(target_year)
                             
-                            # Si no hay número para ese año, empezar desde 1
-                            if last_number == 0:
-                                last_number = 0
+                            # Si no hay número para ese año, empezar desde 0 (para que el siguiente sea 1)
+                            # Pero si hay configuración para ese año, usarla
+                            if last_number == 0 and target_year in config.LAST_INVOICE_NUMBERS:
+                                last_number = config.LAST_INVOICE_NUMBERS[target_year]
                             
                             start_number = last_number + 1  # Continuar desde el siguiente
                             
-                            # Generar facturas usando el último año encontrado
-                            generated = generate_invoices(invoices, output_dir, start_number=start_number, year=last_year)
+                            # Generar facturas usando el año determinado
+                            # Las facturas se ordenarán por fecha automáticamente (más antiguas primero)
+                            generated = generate_invoices(invoices, output_dir, start_number=start_number, year=target_year)
                             
                             # Restaurar configuración original
                             config.IVA_RATE = original_iva
