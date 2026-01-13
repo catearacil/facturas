@@ -417,12 +417,31 @@ def generate_invoices(invoices: list, output_dir: str, start_number: int = 1, ye
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
+    # Ordenar facturas por fecha antes de numerarlas (las más antiguas primero)
+    def parse_date(fecha_str):
+        """Parsea la fecha desde string a objeto datetime para ordenar"""
+        try:
+            # Intentar diferentes formatos de fecha
+            if isinstance(fecha_str, str):
+                # Formato DD/MM/YYYY
+                if '/' in fecha_str:
+                    return datetime.strptime(fecha_str, '%d/%m/%Y')
+                # Formato YYYY-MM-DD
+                elif '-' in fecha_str:
+                    return datetime.strptime(fecha_str, '%Y-%m-%d')
+            return datetime.now()
+        except:
+            return datetime.now()
+    
+    # Ordenar facturas por fecha (más antiguas primero)
+    sorted_invoices = sorted(invoices, key=lambda inv: parse_date(inv.get('fecha', '')))
+    
     generated_files = []
     # Usar el año proporcionado o el año actual
     current_year = year if year is not None else datetime.now().year
     current_number = start_number
     
-    for invoice in invoices:
+    for invoice in sorted_invoices:
         # Generar número de factura
         invoice_number = generate_invoice_number(current_year, current_number)
         

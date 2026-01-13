@@ -9,7 +9,7 @@ IVA_RATE = 0.21  # 21%
 MAX_INVOICE_BASE = 400.00  # € (este es el límite del TOTAL con IVA incluido)
 
 # Formato de numeración de facturas
-INVOICE_NUMBER_FORMAT = "T{year}{number:04d}"  # Ej: T260001, T260002
+INVOICE_NUMBER_FORMAT = "T{year}{number:04d}"  # Ej: T20250264 (factura 264 del año 2025), T20250001 (factura 1 del año 2025)
 
 # Último número de factura usado por año (para continuar la numeración)
 # Formato: {año: último_número}

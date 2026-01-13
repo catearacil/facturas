@@ -268,8 +268,8 @@ def delete_month_from_history(month: str) -> int:
 
 def extract_invoice_number(invoice_number_str: str) -> Optional[int]:
     """
-    Extrae el número de factura del formato T250263
-    Ejemplo: T250263 -> 263
+    Extrae el número de factura del formato T20250264
+    Ejemplo: T20250264 -> 264
     
     Args:
         invoice_number_str: Número de factura en formato T{year}{number:04d}
@@ -277,8 +277,8 @@ def extract_invoice_number(invoice_number_str: str) -> Optional[int]:
     Returns:
         Número de factura (int) o None si no se puede parsear
     """
-    # Patrón: T seguido de 2 dígitos (año) y 4 dígitos (número)
-    match = re.match(r'T\d{2}(\d{4})', invoice_number_str)
+    # Patrón: T seguido de 4 dígitos (año) y 4 dígitos (número)
+    match = re.match(r'T\d{4}(\d{4})', invoice_number_str)
     if match:
         return int(match.group(1))
     return None
@@ -306,10 +306,10 @@ def get_last_invoice_number(year: int) -> int:
         invoice_files = record.get('invoice_files', [])
         for inv_file in invoice_files:
             invoice_number = inv_file.get('number', '')
-            # Extraer el año del número de factura (T250263 -> año 25 = 2025)
-            match = re.match(r'T(\d{2})', invoice_number)
+            # Extraer el año del número de factura (T20250264 -> año 2025)
+            match = re.match(r'T(\d{4})', invoice_number)
             if match:
-                invoice_year = 2000 + int(match.group(1))
+                invoice_year = int(match.group(1))
                 if invoice_year == year:
                     number = extract_invoice_number(invoice_number)
                     if number and number > last_number:
@@ -340,9 +340,9 @@ def get_last_year_with_invoices() -> Optional[int]:
         invoice_files = record.get('invoice_files', [])
         for inv_file in invoice_files:
             invoice_number = inv_file.get('number', '')
-            match = re.match(r'T(\d{2})', invoice_number)
+            match = re.match(r'T(\d{4})', invoice_number)
             if match:
-                invoice_year = 2000 + int(match.group(1))
+                invoice_year = int(match.group(1))
                 number = extract_invoice_number(invoice_number)
                 if number and number > last_number:
                     last_number = number
