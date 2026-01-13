@@ -270,3 +270,31 @@ def delete_month_from_db(month: str) -> int:
             conn.close()
         return 0
 
+
+def clear_all_history() -> int:
+    """
+    Elimina todos los registros del historial (limpia la base de datos por completo).
+    
+    Returns:
+        Número de registros eliminados
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("DELETE FROM invoice_history")
+        deleted_count = cur.rowcount
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return deleted_count
+        
+    except Exception as e:
+        print(f"Error limpiando BD: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return 0
+

@@ -20,7 +20,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.santander_reader import process_santander_file
 from src.invoice_splitter import process_transactions
 from src.invoice_generator import generate_invoices
-from src.history_manager import add_to_history, get_history_by_month, get_month_summary, delete_from_history, delete_month_from_history
+from src.history_manager import add_to_history, get_history_by_month, get_month_summary, delete_from_history, delete_month_from_history, clear_all_history
 import config
 
 
@@ -599,6 +599,37 @@ with tab1:
 # Pestaña 2: Historial
 with tab2:
     st.subheader("📊 Historial de Facturas por Mes")
+    
+    # Botón para limpiar toda la base de datos
+    st.markdown("---")
+    col_header, col_clear = st.columns([4, 1])
+    with col_header:
+        st.markdown("### ⚙️ Administración")
+    with col_clear:
+        if 'confirm_clear' not in st.session_state:
+            st.session_state.confirm_clear = False
+        
+        if st.session_state.confirm_clear:
+            if st.button("✅ Confirmar Limpiar BD", type="primary", use_container_width=True):
+                deleted = clear_all_history()
+                if deleted > 0:
+                    st.success(f"✅ Se eliminaron {deleted} registro(s) del historial")
+                    st.session_state.confirm_clear = False
+                    st.rerun()
+                else:
+                    st.info("ℹ️ No había registros para eliminar")
+                    st.session_state.confirm_clear = False
+            if st.button("❌ Cancelar", use_container_width=True):
+                st.session_state.confirm_clear = False
+                st.rerun()
+        else:
+            if st.button("🗑️ Limpiar BD Completa", type="secondary", use_container_width=True, help="Elimina TODOS los registros del historial. Requiere confirmación."):
+                st.session_state.confirm_clear = True
+                st.rerun()
+    
+    if st.session_state.confirm_clear:
+        st.warning("⚠️ **ADVERTENCIA:** Estás a punto de eliminar TODOS los registros del historial. Esta acción no se puede deshacer. Haz clic en 'Confirmar Limpiar BD' para proceder.")
+    st.markdown("---")
     
     # Cargar historial
     history_by_month = get_history_by_month()

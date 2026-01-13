@@ -17,6 +17,7 @@ try:
         save_history_to_db, 
         delete_from_db as delete_from_db_func,
         delete_month_from_db as delete_month_from_db_func,
+        clear_all_history as clear_all_history_func,
         init_database
     )
     USE_DATABASE = True
@@ -80,7 +81,8 @@ def add_to_history(
     processing_info: Dict = None
 ) -> Dict:
     """
-    Añade un nuevo registro al historial (en base de datos o JSON)
+    Añade un nuevo registro al historial (en base de datos o JSON).
+    Si ya existe un registro del mismo mes, lo reemplaza en lugar de crear uno nuevo.
     
     Args:
         invoice_count: Número de facturas generadas
@@ -96,9 +98,29 @@ def add_to_history(
     Returns:
         Diccionario con el registro añadido
     """
+    # Determinar el mes basado en las fechas de las facturas
+    # Si hay facturas, usar el mes de la primera factura (ya están ordenadas por fecha)
+    month = datetime.now().strftime('%Y-%m')
+    if invoice_files:
+        try:
+            # Intentar extraer el mes de la primera factura
+            first_invoice = invoice_files[0]
+            fecha_str = first_invoice.get('invoice', {}).get('fecha', '')
+            if fecha_str:
+                # Formato DD/MM/YYYY
+                if '/' in fecha_str:
+                    fecha_obj = datetime.strptime(fecha_str, '%d/%m/%Y')
+                    month = fecha_obj.strftime('%Y-%m')
+                # Formato YYYY-MM-DD
+                elif '-' in fecha_str:
+                    fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d')
+                    month = fecha_obj.strftime('%Y-%m')
+        except:
+            pass  # Si falla, usar el mes actual
+    
     record = {
         'date': datetime.now().strftime('%Y-%m-%d'),
-        'month': datetime.now().strftime('%Y-%m'),
+        'month': month,
         'invoice_count': invoice_count,
         'total_base': total_base,
         'total_iva': total_iva,
@@ -123,6 +145,17 @@ def add_to_history(
     
     if USE_DATABASE:
         try:
+            # Verificar si ya existe un registro del mismo mes
+            existing_history = load_history_from_db()
+            for existing_record in existing_history:
+                if existing_record.get('month') == month:
+                    # Eliminar el registro existente del mismo mes
+                    existing_id = existing_record.get('id')
+                    if existing_id:
+                        delete_from_db_func(existing_id)
+                    break
+            
+            # Guardar el nuevo registro
             record_id = save_history_to_db(record)
             record['id'] = record_id
             record['timestamp'] = datetime.now().isoformat()
@@ -134,6 +167,10 @@ def add_to_history(
     
     # Fallback: guardar en JSON
     history = load_history()
+    
+    # Eliminar registros existentes del mismo mes
+    history = [r for r in history if r.get('month') != month]
+    
     record['id'] = len(history) + 1
     record['timestamp'] = datetime.now().isoformat()
     history.append(record)
@@ -264,6 +301,39 @@ def delete_month_from_history(month: str) -> int:
             print(f"Error guardando historial: {e}")
     
     return deleted_count
+
+
+def clear_all_history() -> int:
+    """
+    Elimina todos los registros del historial (limpia la base de datos por completo)
+    
+    Returns:
+        Número de registros eliminados
+    """
+    if USE_DATABASE:
+        try:
+            return clear_all_history_func()
+        except Exception as e:
+            print(f"Error limpiando BD, usando JSON fallback: {e}")
+            # Fallback a JSON
+            pass
+    
+    # Fallback: limpiar JSON
+    history_path = get_history_path()
+    if os.path.exists(history_path):
+        try:
+            with open(history_path, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+            count = len(history)
+            
+            # Vaciar el archivo
+            with open(history_path, 'w', encoding='utf-8') as f:
+                json.dump([], f, ensure_ascii=False, indent=2)
+            return count
+        except Exception as e:
+            print(f"Error limpiando historial: {e}")
+    
+    return 0
 
 
 def extract_invoice_number(invoice_number_str: str) -> Optional[int]:
