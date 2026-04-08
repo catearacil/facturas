@@ -39,6 +39,7 @@ wheels/
 output/*.pdf
 output/*.zip
 output/history/*.json
+output/history/pdfs/
 
 # Input
 input/*.xlsx

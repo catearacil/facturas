@@ -20,7 +20,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.santander_reader import process_santander_file
 from src.invoice_splitter import process_transactions
 from src.invoice_generator import generate_invoices
-from src.history_manager import add_to_history, get_history_by_month, get_month_summary, delete_from_history, delete_month_from_history, clear_all_history
+from src.history_manager import add_to_history, get_history_by_month, get_month_summary, delete_from_history, delete_month_from_history, clear_all_history, regenerate_month_pdfs
 import config
 
 
@@ -725,6 +725,17 @@ with tab2:
                             st.rerun()
                         else:
                             st.error("❌ No se pudo eliminar el mes")
+                    if st.button("🔁 Regenerar PDFs", key=f"regen_month_{month}", use_container_width=True, type="secondary"):
+                        with st.spinner(f"Regenerando PDFs de {month_name}..."):
+                            regen_result = regenerate_month_pdfs(month)
+                        if regen_result.get('generated_pdfs', 0) > 0:
+                            st.success(
+                                f"✅ Se regeneraron {regen_result.get('generated_pdfs', 0)} PDF(s) "
+                                f"de {month_name}"
+                            )
+                            st.rerun()
+                        else:
+                            st.info(f"ℹ️ No se encontraron facturas para regenerar en {month_name}")
                 
                 st.markdown("---")
                 

@@ -527,3 +527,105 @@ def renumber_month_invoices(target_month: str, target_year: int, start_number: i
         'end_number': current - 1 if updated_invoices > 0 else start_number - 1
     }
 
+
+def regenerate_month_pdfs(target_month: str) -> Dict:
+    """
+    Regenera los PDFs de todas las facturas de un mes y actualiza sus rutas en historial.
+    
+    Args:
+        target_month: Mes en formato YYYY-MM (ej: "2026-01")
+    
+    Returns:
+        Resumen de la operación
+    """
+    history = load_history()
+    target_records = [r for r in history if r.get('month') == target_month]
+    
+    if not target_records:
+        return {
+            'updated_records': 0,
+            'generated_pdfs': 0,
+            'target_month': target_month,
+            'output_dir': None
+        }
+    
+    from src.invoice_generator import create_invoice_pdf
+    
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    output_dir = os.path.join(base_dir, 'output', 'history', 'pdfs', target_month)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    updated_records = 0
+    generated_pdfs = 0
+    
+    if USE_DATABASE:
+        for record in target_records:
+            record_id = record.get('id')
+            invoice_files = []
+            
+            for inv in record.get('invoice_files', []):
+                inv_copy = dict(inv)
+                number = inv_copy.get('number', '')
+                filename = inv_copy.get('filename') or f"{number}.pdf"
+                if number:
+                    filename = f"{number}.pdf"
+                filepath = os.path.join(output_dir, filename)
+                
+                invoice_data = {
+                    'fecha': inv_copy.get('fecha', ''),
+                    'base_imponible': float(inv_copy.get('base', 0) or 0),
+                    'importe_con_iva': float(inv_copy.get('total', 0) or 0),
+                }
+                create_invoice_pdf(invoice_data, number, filepath)
+                
+                inv_copy['filename'] = filename
+                inv_copy['path'] = filepath
+                invoice_files.append(inv_copy)
+                generated_pdfs += 1
+            
+            if update_invoice_files_in_db(record_id, invoice_files):
+                updated_records += 1
+    else:
+        history_by_id = {r.get('id'): r for r in history}
+        
+        for record in target_records:
+            record_id = record.get('id')
+            editable = history_by_id.get(record_id)
+            if not editable:
+                continue
+            
+            invoice_files = []
+            for inv in editable.get('invoice_files', []):
+                inv_copy = dict(inv)
+                number = inv_copy.get('number', '')
+                filename = inv_copy.get('filename') or f"{number}.pdf"
+                if number:
+                    filename = f"{number}.pdf"
+                filepath = os.path.join(output_dir, filename)
+                
+                invoice_data = {
+                    'fecha': inv_copy.get('fecha', ''),
+                    'base_imponible': float(inv_copy.get('base', 0) or 0),
+                    'importe_con_iva': float(inv_copy.get('total', 0) or 0),
+                }
+                create_invoice_pdf(invoice_data, number, filepath)
+                
+                inv_copy['filename'] = filename
+                inv_copy['path'] = filepath
+                invoice_files.append(inv_copy)
+                generated_pdfs += 1
+            
+            editable['invoice_files'] = invoice_files
+            updated_records += 1
+        
+        history_path = get_history_path()
+        with open(history_path, 'w', encoding='utf-8') as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+    
+    return {
+        'updated_records': updated_records,
+        'generated_pdfs': generated_pdfs,
+        'target_month': target_month,
+        'output_dir': output_dir
+    }
+
