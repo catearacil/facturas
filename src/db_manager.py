@@ -298,3 +298,39 @@ def clear_all_history() -> int:
             conn.close()
         return 0
 
+
+def update_invoice_files_in_db(record_id: int, invoice_files: List[Dict]) -> bool:
+    """
+    Actualiza el campo invoice_files de un registro del historial.
+    
+    Args:
+        record_id: ID del registro a actualizar
+        invoice_files: Nuevo contenido para invoice_files
+    
+    Returns:
+        True si se actualizó correctamente, False en caso contrario
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE invoice_history
+            SET invoice_files = %s
+            WHERE id = %s
+            """,
+            (json.dumps(invoice_files), record_id)
+        )
+        updated = cur.rowcount > 0
+        conn.commit()
+        cur.close()
+        conn.close()
+        return updated
+    except Exception as e:
+        print(f"Error actualizando invoice_files en BD: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return False
+

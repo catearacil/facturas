@@ -196,28 +196,35 @@ with tab1:
                             # Crear directorio de salida temporal
                             output_dir = tempfile.mkdtemp()
                             
-                            # Obtener el último año con facturas y continuar desde ahí
-                            from src.history_manager import get_last_invoice_number, get_last_year_with_invoices
+                            # Obtener numeración del año de las transacciones
+                            from src.history_manager import get_last_invoice_number
                             
-                            # Determinar el año a usar:
-                            # 1. Primero buscar en el historial (si hay facturas previas)
-                            # 2. Si no hay historial, usar el año de la configuración (2025)
-                            #    Esto asegura que después de limpiar la BD, se use el año correcto
-                            # 3. Si no hay configuración, usar el año actual como último recurso
+                            def get_year_from_invoice_date(date_str):
+                                if not isinstance(date_str, str) or not date_str.strip():
+                                    return None
+                                try:
+                                    if '/' in date_str:
+                                        return datetime.strptime(date_str, '%d/%m/%Y').year
+                                    if '-' in date_str:
+                                        return datetime.strptime(date_str, '%Y-%m-%d').year
+                                except Exception:
+                                    return None
+                                return None
                             
-                            # Buscar el último año que tiene facturas en el historial
-                            last_year = get_last_year_with_invoices()
+                            # Usar el año real de las facturas a generar (por fecha más antigua válida)
+                            parsed_years = [
+                                get_year_from_invoice_date(inv.get('fecha', ''))
+                                for inv in invoices
+                            ]
+                            valid_years = [y for y in parsed_years if y is not None]
+                            inferred_year = min(valid_years) if valid_years else None
                             
-                            # Decidir qué año usar
-                            if last_year is not None:
-                                # Si hay historial, usar ese año (continuar la numeración)
-                                target_year = last_year
+                            # Fallbacks por seguridad
+                            if inferred_year is not None:
+                                target_year = inferred_year
                             elif config.LAST_INVOICE_NUMBERS:
-                                # Si no hay historial, usar el año de la configuración
-                                # Esto es importante después de limpiar la BD
                                 target_year = max(config.LAST_INVOICE_NUMBERS.keys())
                             else:
-                                # Último recurso: año actual
                                 target_year = datetime.now().year
                             
                             # Obtener el último número usado para ese año

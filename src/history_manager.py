@@ -18,6 +18,7 @@ try:
         delete_from_db as delete_from_db_func,
         delete_month_from_db as delete_month_from_db_func,
         clear_all_history as clear_all_history_func,
+        update_invoice_files_in_db,
         init_database
     )
     USE_DATABASE = True
@@ -423,4 +424,106 @@ def get_last_year_with_invoices() -> Optional[int]:
         last_year = max(config.LAST_INVOICE_NUMBERS.keys())
     
     return last_year
+
+
+def renumber_month_invoices(target_month: str, target_year: int, start_number: int = 1) -> Dict:
+    """
+    Renumera las facturas de un mes concreto en formato T{year}{number:04d}.
+    También actualiza el filename según el nuevo número.
+    
+    Args:
+        target_month: Mes en formato YYYY-MM (ej: "2026-01")
+        target_year: Año objetivo para el prefijo (ej: 2026)
+        start_number: Número inicial de secuencia (por defecto 1)
+    
+    Returns:
+        Resumen de la operación
+    """
+    history = load_history()
+    target_records = [r for r in history if r.get('month') == target_month]
+    
+    if not target_records:
+        return {
+            'updated_records': 0,
+            'updated_invoices': 0,
+            'target_month': target_month,
+            'target_year': target_year
+        }
+    
+    def parse_invoice_date(fecha_str: str) -> datetime:
+        if not isinstance(fecha_str, str):
+            return datetime.max
+        try:
+            if '/' in fecha_str:
+                return datetime.strptime(fecha_str, '%d/%m/%Y')
+            if '-' in fecha_str:
+                return datetime.strptime(fecha_str, '%Y-%m-%d')
+        except Exception:
+            return datetime.max
+        return datetime.max
+    
+    all_invoices = []
+    for record in target_records:
+        record_id = record.get('id')
+        for idx, inv in enumerate(record.get('invoice_files', [])):
+            all_invoices.append({
+                'record_id': record_id,
+                'invoice_index': idx,
+                'fecha': inv.get('fecha', ''),
+                'invoice': inv
+            })
+    
+    all_invoices.sort(key=lambda item: parse_invoice_date(item['fecha']))
+    
+    current = start_number
+    updates_by_record = {}
+    for item in all_invoices:
+        new_number = f"T{target_year}{current:04d}"
+        inv = dict(item['invoice'])
+        inv['number'] = new_number
+        inv['filename'] = f"{new_number}.pdf"
+        
+        record_id = item['record_id']
+        if record_id not in updates_by_record:
+            updates_by_record[record_id] = {}
+        updates_by_record[record_id][item['invoice_index']] = inv
+        current += 1
+    
+    updated_records = 0
+    updated_invoices = len(all_invoices)
+    
+    if USE_DATABASE:
+        for record in target_records:
+            record_id = record.get('id')
+            if record_id not in updates_by_record:
+                continue
+            invoice_files = list(record.get('invoice_files', []))
+            for idx, new_inv in updates_by_record[record_id].items():
+                invoice_files[idx] = new_inv
+            if update_invoice_files_in_db(record_id, invoice_files):
+                updated_records += 1
+    else:
+        history_by_id = {r.get('id'): r for r in history}
+        for record_id, updates in updates_by_record.items():
+            record = history_by_id.get(record_id)
+            if not record:
+                continue
+            invoice_files = list(record.get('invoice_files', []))
+            for idx, new_inv in updates.items():
+                invoice_files[idx] = new_inv
+            record['invoice_files'] = invoice_files
+            updated_records += 1
+        
+        history_path = get_history_path()
+        with open(history_path, 'w', encoding='utf-8') as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+    
+    return {
+        'updated_records': updated_records,
+        'updated_invoices': updated_invoices,
+        'target_month': target_month,
+        'target_year': target_year,
+        'start_number': start_number,
+        'end_number': current - 1 if updated_invoices > 0 else start_number - 1
+    }
 
