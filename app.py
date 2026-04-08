@@ -738,6 +738,57 @@ with tab2:
                             st.info(f"ℹ️ No se encontraron facturas para regenerar en {month_name}")
                 
                 st.markdown("---")
+
+                # Descarga ZIP con todas las facturas del mes
+                month_invoice_files = []
+                for rec in records:
+                    month_invoice_files.extend(rec.get('invoice_files', []))
+
+                if month_invoice_files:
+                    month_zip_buffer = BytesIO()
+                    missing_month_files = 0
+                    added_files = 0
+                    used_names = set()
+
+                    with zipfile.ZipFile(month_zip_buffer, 'w', zipfile.ZIP_DEFLATED) as month_zip:
+                        for inv in month_invoice_files:
+                            inv_path = inv.get('path')
+                            inv_filename = inv.get('filename') or f"{inv.get('number', 'factura')}.pdf"
+
+                            if not inv_path or not os.path.exists(inv_path):
+                                missing_month_files += 1
+                                continue
+
+                            # Evitar colisiones de nombre dentro del ZIP
+                            zip_name = inv_filename
+                            if zip_name in used_names:
+                                base_name, ext = os.path.splitext(inv_filename)
+                                suffix = 2
+                                while f"{base_name}_{suffix}{ext}" in used_names:
+                                    suffix += 1
+                                zip_name = f"{base_name}_{suffix}{ext}"
+                            used_names.add(zip_name)
+
+                            with open(inv_path, 'rb') as pdf_file:
+                                month_zip.writestr(zip_name, pdf_file.read())
+                            added_files += 1
+
+                    month_zip_buffer.seek(0)
+
+                    st.download_button(
+                        label=f"📦 Descargar ZIP del mes ({added_files} factura{'s' if added_files != 1 else ''})",
+                        data=month_zip_buffer.getvalue(),
+                        file_name=f"facturas_{month}.zip",
+                        mime="application/zip",
+                        use_container_width=True,
+                        key=f"download_month_zip_{month}"
+                    )
+
+                    if missing_month_files > 0:
+                        st.info(
+                            f"ℹ️ {missing_month_files} factura{'s' if missing_month_files != 1 else ''} "
+                            "no se incluyeron porque su PDF no estaba disponible."
+                        )
                 
                 # Detalles de cada procesamiento
                 for idx, record in enumerate(records):
